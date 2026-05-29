@@ -1,0 +1,116 @@
+{
+  "name": "B-DEVOPS: User Approved -> Notion CRM Update",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "user-approved",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: User Approved",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "user-approved"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "search",
+        "databaseId": {
+          "__rl": true,
+          "value": "YOUR_NOTION_DATABASE_ID_HERE",
+          "mode": "id"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "User ID",
+              "condition": "text",
+              "richTextValue": "={{ $json.body.user_id }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-search",
+      "name": "Notion: Buscar Usuario",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [460, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Estado",
+              "type": "select",
+              "selectValue": "Aprobado"
+            },
+            {
+              "key": "Fecha Aprobacion",
+              "type": "date",
+              "include_time": false,
+              "dateValue": "={{ $('Webhook: User Approved').item.json.body.approved_at }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-update",
+      "name": "Notion: Actualizar Estado",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [680, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"message\": \"Estado actualizado en CRM\" }"
+      },
+      "id": "respond",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: User Approved": {
+      "main": [[{ "node": "Notion: Buscar Usuario", "type": "main", "index": 0 }]]
+    },
+    "Notion: Buscar Usuario": {
+      "main": [[{ "node": "Notion: Actualizar Estado", "type": "main", "index": 0 }]]
+    },
+    "Notion: Actualizar Estado": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "B-DEVOPS" }, { "name": "CRM" }],
+  "meta": {
+    "templateId": "bdevops-user-approved-notion",
+    "instanceId": "bdevops"
+  }
+}

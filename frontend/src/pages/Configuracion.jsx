@@ -258,7 +258,7 @@ export default function Configuracion() {
               </button>
             </form>
             {pinError && <p className="text-red-400 text-xs">{pinError}</p>}
-            <p className="text-gray-600 text-xs">PIN por defecto: <code className="text-gray-400">devnova-admin</code> — cámbialo en Seguridad</p>
+            <p className="text-gray-600 text-xs">PIN por defecto: <code className="text-gray-400">REDACTED</code> — cámbialo abajo</p>
           </div>
         ) : (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 text-xs">

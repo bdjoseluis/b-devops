@@ -1,0 +1,102 @@
+{
+  "name": "B-DEVOPS: User Register -> Notion CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "user-register",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: User Register",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "user-register"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "YOUR_NOTION_DATABASE_ID_HERE",
+          "mode": "id"
+        },
+        "title": "={{ $json.body.username }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Email",
+              "type": "email",
+              "emailValue": "={{ $json.body.email }}"
+            },
+            {
+              "key": "Estado",
+              "type": "select",
+              "selectValue": "Pendiente"
+            },
+            {
+              "key": "Motivo",
+              "type": "richText",
+              "textContent": "={{ $json.body.reason || 'No especificado' }}"
+            },
+            {
+              "key": "Fecha Registro",
+              "type": "date",
+              "include_time": false,
+              "dateValue": "={{ $json.body.timestamp }}"
+            },
+            {
+              "key": "User ID",
+              "type": "richText",
+              "textContent": "={{ $json.body.user_id }}"
+            },
+            {
+              "key": "Fuente",
+              "type": "richText",
+              "textContent": "B-DEVOPS"
+            }
+          ]
+        }
+      },
+      "id": "notion-create",
+      "name": "Notion: Crear Entrada",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [460, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"message\": \"Usuario registrado en CRM\" }"
+      },
+      "id": "respond",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: User Register": {
+      "main": [[{ "node": "Notion: Crear Entrada", "type": "main", "index": 0 }]]
+    },
+    "Notion: Crear Entrada": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "B-DEVOPS" }, { "name": "CRM" }],
+  "meta": {
+    "templateId": "bdevops-user-register-notion",
+    "instanceId": "bdevops"
+  }
+}

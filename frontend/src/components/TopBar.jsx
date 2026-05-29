@@ -1,7 +1,8 @@
 ﻿import { useLocation, useNavigate } from 'react-router-dom'
-import { Clock, ArrowLeft, Radio } from 'lucide-react'
+import { Clock, ArrowLeft, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { health } from '../api/client'
+import { useAuth } from '../context/AuthContext'
 
 const PAGE_TITLES = {
   '/dashboard':    { title: 'Dashboard',                    icon: '📊' },
@@ -31,8 +32,9 @@ const PAGE_TITLES = {
 }
 
 export default function TopBar() {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location  = useLocation()
+  const navigate  = useNavigate()
+  const { logout, role } = useAuth()
   const [time,      setTime]      = useState(new Date())
   const [connected, setConnected] = useState(false)
   const [pulse,     setPulse]     = useState(false)
@@ -122,6 +124,22 @@ export default function TopBar() {
         <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, fontFamily: 'monospace' }}>
           {time.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
+
+        {/* Role badge */}
+        <div style={{ padding: '3px 8px', borderRadius: 6, background: role === 'admin' || role === 'superadmin' ? 'rgba(239,68,68,0.12)' : 'rgba(99,102,241,0.12)', border: `1px solid ${role === 'admin' || role === 'superadmin' ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)'}`, color: role === 'admin' || role === 'superadmin' ? '#f87171' : '#818cf8', fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {role === 'admin' || role === 'superadmin' ? 'ADMIN' : 'USER'}
+        </div>
+
+        {/* Logout */}
+        <button
+          onClick={() => { logout(); navigate('/') }}
+          title="Cerrar sesión"
+          style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:8, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)', cursor:'pointer', fontSize:11, fontFamily:'Inter, sans-serif', transition:'all .18s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; e.currentTarget.style.color = '#f87171' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
+        >
+          <LogOut size={12} /> Salir
+        </button>
       </div>
     </header>
   )

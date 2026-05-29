@@ -34,9 +34,11 @@ jobs:
           }
           Write-Host "Archivos modificados: $($changed.Count)"
 
-          $rebuildBackend  = @($changed | Where-Object { $_ -like "backend/*" })
-          $rebuildFrontend = @($changed | Where-Object { $_ -like "frontend/*" })
-          $rebuildCompose  = @($changed | Where-Object { $_ -eq "docker-compose.yml" })
+          $rebuildBackend   = @($changed | Where-Object { $_ -like "backend/*" })
+          $rebuildFrontend  = @($changed | Where-Object { $_ -like "frontend/*" })
+          $rebuildCompose   = @($changed | Where-Object { $_ -eq "docker-compose.yml" })
+          $restartGrafana   = @($changed | Where-Object { $_ -like "infra/grafana/*" })
+          $restartPrometheus= @($changed | Where-Object { $_ -like "infra/prometheus/*" })
           $rebuilt = $false
 
           if ($rebuildCompose.Count -gt 0) {
@@ -53,6 +55,16 @@ jobs:
             if ($rebuildFrontend.Count -gt 0) {
               Write-Host "Reconstruyendo frontend (React)..."
               docker compose up -d --build bdev-frontend
+              $rebuilt = $true
+            }
+            if ($restartGrafana.Count -gt 0) {
+              Write-Host "Configuracion Grafana cambiada - reiniciando bdev-grafana..."
+              docker compose restart bdev-grafana
+              $rebuilt = $true
+            }
+            if ($restartPrometheus.Count -gt 0) {
+              Write-Host "Configuracion Prometheus cambiada - recargando bdev-prometheus..."
+              docker compose restart bdev-prometheus
               $rebuilt = $true
             }
           }

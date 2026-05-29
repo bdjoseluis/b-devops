@@ -19,7 +19,7 @@ export default function ToolHIBP() {
       // For breach check we need a key. Here we try the public API first.
       const encoded = encodeURIComponent(input.trim())
       const resp = await fetch(`https://haveibeenpwned.com/api/v3/breachedaccount/${encoded}?truncateResponse=false`, {
-        headers: { 'hibp-api-key': '', 'User-Agent': 'AURA-OPS/2.0' }
+        headers: { 'hibp-api-key': '', 'User-Agent': 'B-DEVOPS/2.0' }
       })
       if (resp.status === 401) {
         setError('API key de HIBP requerida. Configúrala en Configuración → APIs → HaveIBeenPwned.')

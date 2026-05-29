@@ -1,7 +1,7 @@
 import httpx
 
 BASE = "https://api.bgpview.io"
-HEADERS = {"User-Agent": "AURA-OPS/1.0 OSINT Platform"}
+HEADERS = {"User-Agent": "B-DEVOPS/1.0 OSINT Platform"}
 
 
 async def lookup_ip(ip: str) -> dict:

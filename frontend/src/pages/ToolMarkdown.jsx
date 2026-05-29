@@ -99,8 +99,8 @@ const SAMPLE = `# B-DEVOPS Platform
 
 \`\`\`bash
 # Clonar el repositorio
-git clone https://github.com/bdjoseluis/devnova.git
-cd devnova && docker compose up -d
+git clone https://github.com/bdjoseluis/b-devops.git
+cd b-devops && docker compose up -d
 \`\`\`
 
 ## Tabla de herramientas

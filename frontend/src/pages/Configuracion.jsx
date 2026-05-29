@@ -424,7 +424,7 @@ export default function Configuracion() {
           Apunta n8n al siguiente endpoint <strong className="text-white">POST</strong> para lanzar una auditoría completa y recibir el resultado (incluyendo el DOCX si SMTP está habilitado):
         </p>
         {[
-          { label: 'Endpoint webhook', value: 'http://localhost:8000/api/audit/webhook' },
+          { label: 'Endpoint webhook', value: 'https://api.bdev.qzz.io/api/audit/webhook' },
           { label: 'Body JSON de ejemplo', value: '{ "target": "dominio.com", "auto_report": true, "callback_url": "https://tu-n8n/webhook/resultado" }' },
         ].map(({ label, value }) => (
           <div key={label} className="mb-3">

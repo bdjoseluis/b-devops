@@ -11,7 +11,35 @@ export function AuthProvider({ children }) {
   const [role,     setRole]     = useState(() => localStorage.getItem(ROLE_KEY) || 'user')
   const [checking, setChecking] = useState(true)
 
-  // Set axios header whenever token changes
+  // Set axios header + validate stored token on first load
+  useEffect(() => {
+    const storedToken = localStorage.getItem(TOKEN_KEY)
+    if (storedToken) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
+      // Verify token is still valid against the backend
+      api.get('/auth/me')
+        .then(res => {
+          // Token valid — sync role from server response
+          const serverRole = res.data?.role || 'user'
+          setRole(serverRole)
+          localStorage.setItem(ROLE_KEY, serverRole)
+        })
+        .catch(() => {
+          // Token expired or invalid — clear auth state
+          setToken(null)
+          setRole('user')
+          delete api.defaults.headers.common['Authorization']
+          localStorage.removeItem(TOKEN_KEY)
+          localStorage.removeItem(ROLE_KEY)
+        })
+        .finally(() => setChecking(false))
+    } else {
+      delete api.defaults.headers.common['Authorization']
+      setChecking(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep axios header in sync when token changes after initial load
   useEffect(() => {
     if (token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
@@ -21,7 +49,6 @@ export function AuthProvider({ children }) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(ROLE_KEY)
     }
-    setChecking(false)
   }, [token])
 
   /** Admin login: just password.  User login: username + password. */

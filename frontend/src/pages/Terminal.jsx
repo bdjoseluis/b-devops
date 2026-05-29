@@ -18,7 +18,7 @@ export default function Terminal() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: '```\nB-DEVOPS — Terminal de Inteligencia Artificial\nPotenciado por Gemini Flash · Solo auditorías autorizadas\n```\n\n¡Bienvenido! Soy AURA, tu asistente de ciberseguridad. Puedo ayudarte a:\n\n- **Analizar resultados** de OSINT y scans\n- **Guiar el pentest** paso a paso\n- **Interpretar vulnerabilidades** y CVEs\n- **Generar contenido** para reportes\n- **Responder dudas** sobre seguridad ofensiva/defensiva\n\nEscribe tu consulta o usa los comandos rápidos de arriba.',
+      content: '```\nB-DEVOPS — Terminal de Inteligencia Artificial\nPotenciado por Gemini Flash · Solo auditorías autorizadas\n```\n\n¡Bienvenido! Soy B-DEVOPS AI, tu asistente de ciberseguridad. Puedo ayudarte a:\n\n- **Analizar resultados** de OSINT y scans\n- **Guiar el pentest** paso a paso\n- **Interpretar vulnerabilidades** y CVEs\n- **Generar contenido** para reportes\n- **Responder dudas** sobre seguridad ofensiva/defensiva\n\nEscribe tu consulta o usa los comandos rápidos de arriba.',
       timestamp: new Date(),
     }
   ])
@@ -112,7 +112,7 @@ export default function Terminal() {
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-green-400 rounded-full pulse-dot" />
           <TerminalIcon size={16} className="text-green-400" />
-          <span className="text-green-400 font-semibold">AURA — Terminal IA</span>
+          <span className="text-green-400 font-semibold">B-DEVOPS AI — Terminal IA</span>
           <span className="text-gray-600 text-xs font-mono">Gemini Flash</span>
         </div>
         <div className="flex gap-2">
@@ -151,7 +151,7 @@ export default function Terminal() {
         {loading && (
           <div className="flex items-center gap-3 p-4 rounded-lg bg-surface">
             <Spinner size={16} />
-            <span className="text-gray-400 text-sm font-mono">AURA está analizando</span>
+            <span className="text-gray-400 text-sm font-mono">B-DEVOPS AI está analizando</span>
             <span className="cursor-blink" />
           </div>
         )}
@@ -187,7 +187,7 @@ export default function Terminal() {
           <input
             ref={inputRef}
             className="flex-1 bg-transparent text-white placeholder-gray-500 text-sm outline-none"
-            placeholder="Pregunta a AURA... (Enter para enviar)"
+            placeholder="Pregunta a B-DEVOPS AI... (Enter para enviar)"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}

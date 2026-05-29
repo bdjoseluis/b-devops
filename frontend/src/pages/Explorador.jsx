@@ -7,7 +7,7 @@ const INITIAL_TREE = [
       {
         id: 'f1-1', name: 'Mi Empresa', type: 'folder', children: [
           { id: 'd1', name: 'Perfil de empresa', type: 'document', content: '# Mi Empresa\n\n## Descripción\nEmpresa de ciberseguridad y desarrollo de software.\n\n## Servicios\n- Auditorías de seguridad\n- Desarrollo de software a medida\n- Consultoría IT\n- Formación en ciberseguridad\n\n## Contacto\n- Email: contacto@miempresa.com\n- Web: https://miempresa.com\n- LinkedIn: linkedin.com/company/miempresa' },
-          { id: 'd2', name: 'Mis Webs y Portfolio', type: 'document', content: '# Mis Sitios Web y Portfolio\n\n## Portfolio Personal\n- URL: https://miportfolio.com\n- GitHub: https://github.com/tu-usuario\n- Stack: Angular / React\n\n## B-DEVOPS\n- URL: (pendiente de deploy)\n- Repo: https://github.com/tu-usuario/aura-ops\n- Stack: FastAPI + React + Vite\n\n## Proyectos Destacados\n- **B-DEVOPS**: Suite OSINT y ciberseguridad\n- **Personal OS**: Dashboard personal fullstack\n\n## Redes\n- LinkedIn: linkedin.com/in/tu-usuario\n- Twitter/X: @tu-usuario\n- GitHub: github.com/tu-usuario' },
+          { id: 'd2', name: 'Mis Webs y Portfolio', type: 'document', content: '# Mis Sitios Web y Portfolio\n\n## Portfolio Personal\n- URL: https://miportfolio.com\n- GitHub: https://github.com/tu-usuario\n- Stack: Angular / React\n\n## B-DEVOPS\n- URL: (pendiente de deploy)\n- Repo: https://github.com/tu-usuario/b-devops\n- Stack: FastAPI + React + Vite\n\n## Proyectos Destacados\n- **B-DEVOPS**: Suite OSINT y ciberseguridad\n- **Personal OS**: Dashboard personal fullstack\n\n## Redes\n- LinkedIn: linkedin.com/in/tu-usuario\n- Twitter/X: @tu-usuario\n- GitHub: github.com/tu-usuario' },
         ]
       },
       {

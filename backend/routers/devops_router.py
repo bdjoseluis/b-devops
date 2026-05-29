@@ -110,8 +110,8 @@ async def analytics_daily(days: int = 30):
 async def stack_status():
     """Estado de todos los servicios del stack para el Portal."""
     services = [
-        {"id": "backend",    "name": "AURA Backend",   "url": "http://localhost:8000/api/health",  "port": 8000, "icon": "⚡", "color": "green",  "localUrl": "http://localhost:8000/docs"},
-        {"id": "frontend",   "name": "AURA Frontend",  "url": "http://localhost:3000",             "port": 3000, "icon": "🖥️", "color": "cyan",   "localUrl": "http://localhost:3000"},
+        {"id": "backend",    "name": "B-DEVOPS Backend",   "url": "http://localhost:8000/api/health",  "port": 8000, "icon": "⚡", "color": "green",  "localUrl": "http://localhost:8000/docs"},
+        {"id": "frontend",   "name": "B-DEVOPS Frontend",  "url": "http://localhost:3000",             "port": 3000, "icon": "🖥️", "color": "cyan",   "localUrl": "http://localhost:3000"},
         {"id": "n8n",        "name": "n8n Workflows",  "url": "http://localhost:5678/healthz",     "port": 5678, "icon": "🔄", "color": "orange", "localUrl": "http://localhost:5678"},
         {"id": "clickhouse", "name": "ClickHouse",     "url": "http://localhost:8123/ping",        "port": 8123, "icon": "📊", "color": "yellow", "localUrl": "http://localhost:8123/play"},
         {"id": "grafana",    "name": "Grafana",        "url": "http://localhost:9091/api/health",  "port": 9091, "icon": "📈", "color": "orange", "localUrl": "http://localhost:9091"},

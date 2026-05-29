@@ -363,7 +363,7 @@ function ServiciosTab() {
           {[
             { label: 'n8n :5678', color: 'text-orange-400' },
             { label: '↔ webhooks ↔' },
-            { label: 'AURA backend', color: 'text-green-400' },
+            { label: 'B-DEVOPS backend', color: 'text-green-400' },
             { label: '↔ Airbyte :8080', color: 'text-blue-400' },
             { label: '→ ClickHouse', color: 'text-yellow-400' },
           ].map((item, i) => (
@@ -573,7 +573,7 @@ function DeployGuide() {
       color: 'text-green-400',
       content: [
         { type: 'text', value: 'Instala cert-manager para SSL gratuito, luego aplica todos los manifests.' },
-        { type: 'code', lang: 'bash', value: '# 1. cert-manager (SSL gratuito con Let\'s Encrypt)\nkubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml\nkubectl wait --for=condition=ready pod -l app=cert-manager -n cert-manager --timeout=120s\n\n# 2. Edita kubernetes/07-cert-manager.yaml → pon tu email\n# 3. Edita kubernetes/06-ingress.yaml → pon tu dominio\n# 4. Edita kubernetes/04-aura-backend.yaml → pon la imagen correcta\n\n# 5. Desplegar todo\nkubectl apply -k ./kubernetes/\n\n# 6. Ver estado\nkubectl get pods -n aura-ops\nkubectl get ingress -n aura-ops' },
+        { type: 'code', lang: 'bash', value: '# 1. cert-manager (SSL gratuito con Let\'s Encrypt)\nkubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml\nkubectl wait --for=condition=ready pod -l app=cert-manager -n cert-manager --timeout=120s\n\n# 2. Edita kubernetes/07-cert-manager.yaml → pon tu email\n# 3. Edita kubernetes/06-ingress.yaml → pon tu dominio\n# 4. Edita kubernetes/04-bdev-backend.yaml → pon la imagen correcta\n\n# 5. Desplegar todo\nkubectl apply -k ./kubernetes/\n\n# 6. Ver estado\nkubectl get pods -n b-devops\nkubectl get ingress -n b-devops' },
       ]
     },
     {

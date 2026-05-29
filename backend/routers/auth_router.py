@@ -335,6 +335,17 @@ async def reject_user(user_id: str):
     return {"status": "rejected", "user": user["username"]}
 
 
+@router.post("/approve/{user_id}")
+async def approve_user_api(user_id: str, user=Depends(admin_required)):
+    """Aprobar usuario desde la UI (requiere token admin)."""
+    return await approve_user(user_id)
+
+@router.post("/reject/{user_id}")
+async def reject_user_api(user_id: str, user=Depends(admin_required)):
+    """Rechazar usuario desde la UI (requiere token admin)."""
+    return await reject_user(user_id)
+
+
 @router.get("/users")
 async def list_users(user=Depends(admin_required)):
     """Listar todos los usuarios (solo admin)."""

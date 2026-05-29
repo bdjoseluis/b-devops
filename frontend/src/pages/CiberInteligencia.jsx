@@ -192,7 +192,7 @@ export default function CiberInteligencia() {
           <div className="card border-green-700/30 bg-green-900/10">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 bg-green-400 rounded-full pulse-dot" />
-              <p className="section-title mb-0 text-green-400">Análisis IA — AURA</p>
+              <p className="section-title mb-0 text-green-400">Análisis IA — B-DEVOPS</p>
             </div>
             {aiLoading ? (
               <div className="flex items-center gap-3">

@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import { useAuth } from './context/AuthContext'
 import Galaxy from './pages/Galaxy'

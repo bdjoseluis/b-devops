@@ -126,7 +126,7 @@ async def _search_osm(location: str, category: str, radius_km: int, limit: int) 
     try:
         async with httpx.AsyncClient(
             timeout=15,
-            headers={"User-Agent": "AURA-OPS-Prospector/1.0"}
+            headers={"User-Agent": "B-DEVOPS-Prospector/1.0"}
         ) as client:
             geo_r = await client.get(
                 "https://nominatim.openstreetmap.org/search",
@@ -258,7 +258,7 @@ async def _check_business_online(business: dict) -> dict:
         async with httpx.AsyncClient(
             timeout=8,
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; AURA-OPS/1.0)"}
+            headers={"User-Agent": "Mozilla/5.0 (compatible; B-DEVOPS/1.0)"}
         ) as client:
             r = await client.get(website)
 

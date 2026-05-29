@@ -15,7 +15,7 @@ def _get_model():
         _model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=(
-                "Eres AURA, un asistente experto en ciberseguridad, OSINT y auditoría. "
+                "Eres B-DEVOPS AI, un asistente experto en ciberseguridad, OSINT y auditoría. "
                 "Respondes siempre en español. Eres directo, técnico y conciso. "
                 "Cuando el usuario te da datos de un escaneo o OSINT, los analizas e identifies riesgos, "
                 "recomiendas pasos siguientes y explicas hallazgos críticos. "

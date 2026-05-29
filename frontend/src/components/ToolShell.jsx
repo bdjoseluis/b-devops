@@ -75,9 +75,9 @@ export default function ToolShell({ icon, name, color = '#a855f7', badge, childr
           </div>
         </div>
 
-        {/* DEVNOVA brand */}
+        {/* B-DEVOPS brand */}
         <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.22em' }}>
-          DEV<span style={{ color: 'rgba(167,139,250,0.5)' }}>NOVA</span>
+          B-<span style={{ color: 'rgba(167,139,250,0.5)' }}>DEVOPS</span>
         </div>
       </div>
 

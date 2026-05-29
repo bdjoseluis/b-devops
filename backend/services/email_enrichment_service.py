@@ -104,7 +104,7 @@ async def _check_emailrep(email: str) -> dict:
     try:
         async with httpx.AsyncClient(
             timeout=10,
-            headers={"User-Agent": "AURA-OPS/1.0", "Key": ""}
+            headers={"User-Agent": "B-DEVOPS/1.0", "Key": ""}
         ) as client:
             r = await client.get(f"https://emailrep.io/{email}")
             if r.status_code == 200:

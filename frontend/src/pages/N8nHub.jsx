@@ -278,7 +278,7 @@ export default function N8nHub() {
             <h2 className="text-white font-semibold mb-4">Plantillas de workflows recomendadas</h2>
             <div className="space-y-3">
               {[
-                { name: 'OSINT Auto-Report', desc: 'Trigger via webhook → run AURA OSINT → generate PDF → send email', icon: '🔍' },
+                { name: 'OSINT Auto-Report', desc: 'Trigger via webhook → run B-DEVOPS OSINT → generate PDF → send email', icon: '🔍' },
                 { name: 'Breach Alert Bot', desc: 'Schedule daily → check DeHashed/LeakRadar → Telegram/Slack notification', icon: '🚨' },
                 { name: 'Uptime Monitor Alert', desc: 'Schedule every 5min → ping services → alert on down', icon: '📡' },
                 { name: 'Client Report Pipeline', desc: 'Webhook → run audit → format report → save to Drive', icon: '📋' },

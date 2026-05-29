@@ -79,8 +79,8 @@ export const auth = {
   register: (username, email, password, reason = '') =>
     api.post('/auth/register', { username, email, password, reason }).then(r => r.data),
   listUsers: () => api.get('/auth/users').then(r => r.data),
-  approveUser: (user_id) => api.get(`/auth/approve/${user_id}`).then(r => r.data),
-  rejectUser: (user_id) => api.get(`/auth/reject/${user_id}`).then(r => r.data),
+  approveUser: (user_id) => api.post(`/auth/approve/${user_id}`).then(r => r.data),
+  rejectUser: (user_id) => api.post(`/auth/reject/${user_id}`).then(r => r.data),
   deleteUser: (user_id) => api.delete(`/auth/users/${user_id}`).then(r => r.data),
   me: () => api.get('/auth/me').then(r => r.data),
 }

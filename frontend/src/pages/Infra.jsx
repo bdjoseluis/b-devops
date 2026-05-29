@@ -268,7 +268,7 @@ export default function Infra() {
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Nombre</span>
-                  <span className="text-gray-300 font-mono">aura-ops</span>
+                  <span className="text-gray-300 font-mono">b-devops</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">ID</span>
@@ -415,7 +415,7 @@ export default function Infra() {
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-500">Tarea</span>
-                <span className="text-gray-300 font-mono">AURA-CloudflaredTunnel</span>
+                <span className="text-gray-300 font-mono">B-DEVOPS-CloudflaredTunnel</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Disparador</span>

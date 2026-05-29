@@ -204,7 +204,7 @@ def generate_osint_report(target: str, data: dict, auditor: dict, ai_summary: st
 
     timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_tgt   = target.replace(".", "_").replace("/", "_").replace(":", "_")
-    filename   = f"AURA_OSINT_{safe_tgt}_{timestamp}.pdf"
+    filename   = f"BDEVOPS_OSINT_{safe_tgt}_{timestamp}.pdf"
     filepath   = REPORTS_DIR / filename
     pdf.output(str(filepath))
     return str(filepath)

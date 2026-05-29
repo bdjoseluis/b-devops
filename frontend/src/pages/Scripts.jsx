@@ -215,7 +215,7 @@ jobs:
           username: \${{ secrets.VPS_USER }}
           key: \${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/aura-ops
+            cd /var/www/b-devops
             git pull origin main
             source venv/bin/activate
             pip install -r backend/requirements.txt
@@ -232,7 +232,7 @@ jobs:
 # Uso: sudo ./deploy-nginx.sh
 
 DOMAIN="tudominio.com"
-APP_DIR="/var/www/aura-ops"
+APP_DIR="/var/www/b-devops"
 
 echo "🚀 Desplegando B-DEVOPS en Nginx..."
 
@@ -249,7 +249,7 @@ echo "✅ Backend reiniciado"
 cd frontend
 npm ci --silent
 npm run build
-sudo cp -r dist/* /var/www/html/aura-ops/
+sudo cp -r dist/* /var/www/html/b-devops/
 echo "✅ Frontend copiado"
 
 sudo nginx -t && sudo systemctl reload nginx
@@ -260,7 +260,7 @@ echo "🌐 App disponible en https://$DOMAIN"
 # server {
 #   listen 443 ssl http2;
 #   server_name tudominio.com;
-#   root /var/www/html/aura-ops;
+#   root /var/www/html/b-devops;
 #   location / { try_files $uri /index.html; }
 #   location /api/ { proxy_pass http://127.0.0.1:8000; }
 # }`
@@ -282,10 +282,10 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/var/www/aura-ops/backend
-ExecStart=/var/www/aura-ops/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
+WorkingDirectory=/var/www/b-devops/backend
+ExecStart=/var/www/b-devops/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
 
-EnvironmentFile=/var/www/aura-ops/.env
+EnvironmentFile=/var/www/b-devops/.env
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -417,17 +417,17 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-resource "digitalocean_droplet" "aura_ops" {
+resource "digitalocean_droplet" "bdev_ops" {
   image    = "ubuntu-22-04-x64"
-  name     = "aura-ops-server"
+  name     = "bdev-ops-server"
   region   = "fra1"
   size     = "s-1vcpu-2gb"
   ssh_keys = [var.ssh_fingerprint]
-  tags     = ["aura-ops", "production"]
+  tags     = ["bdev-ops", "production"]
 }
 
 output "server_ip" {
-  value = digitalocean_droplet.aura_ops.ipv4_address
+  value = digitalocean_droplet.bdev_ops.ipv4_address
 }
 
 # --- ansible/playbook.yml ---
@@ -440,10 +440,10 @@ output "server_ip" {
 #         name: [docker.io, docker-compose, nginx, certbot, python3-certbot-nginx]
 #         state: present
 #     - git:
-#         repo: https://github.com/tu-usuario/aura-ops.git
-#         dest: /var/www/aura-ops
+#         repo: https://github.com/tu-usuario/b-devops.git
+#         dest: /var/www/b-devops
 #     - command: docker-compose -f docker-compose.prod.yml up -d
-#       args: { chdir: /var/www/aura-ops }
+#       args: { chdir: /var/www/b-devops }
 #     - command: certbot --nginx -d {{ domain }} --email {{ email }} --agree-tos -n`
   },
   // ── WEB / SEO ──

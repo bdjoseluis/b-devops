@@ -81,7 +81,7 @@ async def check_breach(email: str) -> dict:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}",
-                headers={"hibp-api-key": key, "user-agent": "AURA-OPS"},
+                headers={"hibp-api-key": key, "user-agent": "B-DEVOPS"},
                 params={"truncateResponse": False}
             )
             if r.status_code == 404:

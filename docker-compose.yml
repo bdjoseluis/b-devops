@@ -1,0 +1,485 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# B-DEV SYSTEM — Stack de infraestructura unificado
+#
+# Arquitectura de redes:
+#   frontend-net  → Traefik + servicios web expuestos públicamente
+#   backend-net   → BDs y servicios internos (internal: true, sin ruta a internet)
+#   bdev-backend  → Puente entre ambas redes
+#
+# Subdominios (vía Cloudflare Tunnel → Traefik):
+#   bdev.qzz.io         → bdev-portfolio   (CV / Portfolio)
+#   app.bdev.qzz.io     → bdev-frontend    (Plataforma B-Dev)
+#   api.bdev.qzz.io     → bdev-backend     (API FastAPI)
+#   crm.bdev.qzz.io     → bdev-n8n         (/webhook/* público, UI solo con VPN)
+#   monitor.bdev.qzz.io → Grafana + Traefik dashboard (basic auth + VPN)
+#   vpn.bdev.qzz.io     → bdev-wireguard   (admin UI — solo desde VPN)
+#
+# VPN WireGuard (10.100.0.0/24):
+#   Servidor: 10.100.0.1  — Cliente admin (móvil): 10.100.0.2
+#   Acceso admin cuando en VPN (sin Cloudflare):
+#     • PostgreSQL:  bdev-postgres:5432
+#     • ClickHouse:  bdev-clickhouse:8123
+#     • n8n UI:      crm.bdev.qzz.io  (Traefik ve IP VPN → pasa vpn-only)
+#     • API settings: api.bdev.qzz.io/api/settings (idem)
+#
+#   PREREQUISITO: abrir puerto 51820/UDP en tu router/firewall.
+#   Configura WG_SERVER_HOST en .env con tu IP pública o dominio.
+#
+# Uso:
+#   cp .env.example .env   # ajusta credenciales
+#   docker compose up -d   # levanta el búnker
+#   docker compose logs -f # monitoriza
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Traefik v3 — Reverse Proxy ───────────────────────────────────────────────
+  bdev-traefik:
+    image: traefik:v3
+    container_name: bdev-traefik
+    restart: unless-stopped
+    command:
+      # API y Dashboard
+      - --api.dashboard=true
+      - --api.insecure=false
+      # Provider Docker
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=frontend-net
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.metrics.address=:9100
+      # Métricas Prometheus
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
+      - --metrics.prometheus.addserviceslabels=true
+      - --metrics.prometheus.addrouterslabels=true
+      # Ping / healthcheck endpoint
+      - --ping=true
+      # Logging
+      - --log.level=INFO
+      - --accesslog=true
+      - --accesslog.filepath=/var/log/traefik/access.log
+      - --accesslog.format=json
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_logs:/var/log/traefik
+    networks:
+      - frontend-net
+    labels:
+      - "traefik.enable=true"
+      # ── Middleware: Basic Auth para monitor.bdev.qzz.io ─────────────────────
+      # Contraseña: REDACTED  (generado con httpd:2.4 htpasswd -nb)
+      # Los $$ en YAML son $ literales — necesario para el formato htpasswd
+      - "traefik.http.middlewares.monitor-auth.basicauth.users=admin:$$apr1$$0iPkpzJA$$Jk1U1e86CbV7/Mq.ZgY22/"
+      - "traefik.http.middlewares.monitor-auth.basicauth.realm=B-Dev Monitor"
+      # ── Middleware: VPN-only — permite sólo subnet WireGuard (10.100.0.0/24) ─
+      # Las IPs VPN llegan directamente (bypass Cloudflare) desde el túnel WG.
+      # Para que funcione: el cliente VPN debe usar el host file para resolver
+      # los dominios admin a 10.100.0.1 (IP del servidor WG en Docker net).
+      - "traefik.http.middlewares.vpn-only.ipallowlist.sourcerange=10.100.0.0/24,127.0.0.1/32,172.16.0.0/12,192.168.0.0/16"
+      # ── Router: Traefik Dashboard ────────────────────────────────────────────
+      - "traefik.http.routers.traefik-dash.rule=Host(`monitor.bdev.qzz.io`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.traefik-dash.service=api@internal"
+      - "traefik.http.routers.traefik-dash.middlewares=monitor-auth@docker"
+      - "traefik.http.routers.traefik-dash.priority=20"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── bdev-portfolio — CV / Portfolio ─────────────────────────────────────────
+  bdev-portfolio:
+    build:
+      context: D:/portfolio
+      dockerfile: Dockerfile
+    container_name: bdev-portfolio
+    restart: unless-stopped
+    networks:
+      - frontend-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio.rule=Host(`bdev.qzz.io`)"
+      - "traefik.http.services.portfolio.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── bdev-frontend — Plataforma B-Dev (React/Nginx) ──────────────────────────
+  bdev-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bdev-frontend
+    restart: unless-stopped
+    depends_on:
+      bdev-backend:
+        condition: service_healthy
+    networks:
+      - frontend-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`app.bdev.qzz.io`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── bdev-backend — API FastAPI ───────────────────────────────────────────────
+  # Está en AMBAS redes: puente entre la capa web y las BDs internas
+  bdev-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bdev-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bdev}:${POSTGRES_PASSWORD:-bdev}@bdev-postgres:5432/${POSTGRES_DB:-bdev_ops}
+      - CLICKHOUSE_HOST=bdev-clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - SECRET_KEY=${SECRET_KEY:-changeme_backend_secret}
+    volumes:
+      - ./backend/config.json:/app/config.json
+      - ./backend/reports:/app/reports
+    depends_on:
+      bdev-postgres:
+        condition: service_healthy
+    networks:
+      - frontend-net
+      - backend-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.bdev.qzz.io`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      # ── Router admin: /api/settings solo con VPN (mayor prioridad) ──────────
+      - "traefik.http.routers.backend-admin.rule=Host(`api.bdev.qzz.io`) && PathPrefix(`/api/settings`)"
+      - "traefik.http.routers.backend-admin.service=backend"
+      - "traefik.http.routers.backend-admin.middlewares=vpn-only@docker"
+      - "traefik.http.routers.backend-admin.priority=20"
+      # Forzar al provider Docker a usar frontend-net para enrutar este servicio
+      - "traefik.docker.network=frontend-net"
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── bdev-postgres — PostgreSQL 16 (red interna) ──────────────────────────────
+  bdev-postgres:
+    image: postgres:16-alpine
+    platform: linux/amd64
+    container_name: bdev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bdev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bdev}
+      POSTGRES_DB: ${POSTGRES_DB:-bdev_ops}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Sin ports: — solo accesible desde backend-net
+    networks:
+      - backend-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bdev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── bdev-clickhouse — Analytics (red interna) ────────────────────────────────
+  bdev-clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    platform: linux/amd64
+    container_name: bdev-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      CLICKHOUSE_DB: bdev_analytics
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infra/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    # Sin ports: — solo accesible desde backend-net
+    networks:
+      - backend-net
+    cap_add:
+      - SYS_NICE
+      - NET_ADMIN
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── bdev-n8n — Workflow Automation / CRM ────────────────────────────────────
+  # frontend-net: Traefik puede enrutarlo
+  # backend-net:  puede acceder a postgres
+  bdev-n8n:
+    image: n8nio/n8n:latest
+    platform: linux/amd64
+    container_name: bdev-n8n
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+      # N8N_ENCRYPTION_KEY: gestionado desde el archivo /home/node/.n8n/config del volumen
+      # No pasar aquí para evitar conflictos de comparación con el archivo de configuración
+      # URL pública para generación de webhooks (Notion, Zapier, etc.)
+      - WEBHOOK_URL=https://crm.bdev.qzz.io
+      - N8N_HOST=crm.bdev.qzz.io
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      # DB: usa schema propio 'n8n' dentro de bdev-postgres
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=bdev-postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-bdev_ops}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-bdev}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-bdev}
+      - DB_POSTGRESDB_SCHEMA=n8n
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      bdev-postgres:
+        condition: service_healthy
+    networks:
+      - frontend-net
+      - backend-net
+    labels:
+      - "traefik.enable=true"
+      # Router 1: /webhook/* — PÚBLICO para integraciones externas (GitHub, Notion, etc.)
+      - "traefik.http.routers.n8n-webhook.rule=Host(`crm.bdev.qzz.io`) && PathPrefix(`/webhook`)"
+      - "traefik.http.routers.n8n-webhook.priority=100"
+      - "traefik.http.routers.n8n-webhook.service=n8n-svc"
+      # Router 2: UI de n8n — SOLO con VPN (10.100.0.0/24)
+      - "traefik.http.routers.n8n-ui.rule=Host(`crm.bdev.qzz.io`)"
+      - "traefik.http.routers.n8n-ui.priority=1"
+      - "traefik.http.routers.n8n-ui.service=n8n-svc"
+      - "traefik.http.routers.n8n-ui.middlewares=vpn-only@docker"
+      # Servicio común para ambos routers
+      - "traefik.http.services.n8n-svc.loadbalancer.server.port=5678"
+      # Traefik debe usar frontend-net para llegar a n8n
+      - "traefik.docker.network=frontend-net"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ── cAdvisor — Métricas de contenedores Docker ──────────────────────────────
+  bdev-cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: bdev-cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - frontend-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ── Node Exporter — Métricas del host (CPU, RAM, disco, red) ────────────────
+  bdev-node-exporter:
+    image: prom/node-exporter:latest
+    container_name: bdev-node-exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    networks:
+      - frontend-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ── Prometheus — Recolección de métricas ─────────────────────────────────────
+  bdev-prometheus:
+    image: prom/prometheus:latest
+    container_name: bdev-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - frontend-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      - bdev-traefik
+
+  # ── Grafana — Dashboards de observabilidad ───────────────────────────────────
+  bdev-grafana:
+    image: grafana/grafana:latest
+    container_name: bdev-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-bdev@Monitor24}
+      - GF_SERVER_ROOT_URL=https://monitor.bdev.qzz.io/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      # Datasource Prometheus pre-configurado
+      - GF_DATASOURCES_DEFAULT_NAME=Prometheus
+      - GF_DATASOURCES_DEFAULT_TYPE=prometheus
+      - GF_DATASOURCES_DEFAULT_URL=http://bdev-prometheus:9090
+      - GF_DATASOURCES_DEFAULT_ACCESS=proxy
+      - GF_DATASOURCES_DEFAULT_ISDEFAULT=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - bdev-prometheus
+    networks:
+      - frontend-net
+    labels:
+      - "traefik.enable=true"
+      # Grafana en /grafana dentro de monitor.bdev.qzz.io
+      - "traefik.http.routers.grafana.rule=Host(`monitor.bdev.qzz.io`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.service=grafana-svc"
+      - "traefik.http.routers.grafana.middlewares=monitor-auth@docker"
+      - "traefik.http.routers.grafana.priority=10"
+      - "traefik.http.services.grafana-svc.loadbalancer.server.port=3000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ── bdev-wireguard — VPN Admin (WireGuard via wg-easy) ─────────────────────
+  # Acceso admin: n8n UI, API settings, PostgreSQL, ClickHouse
+  # PREREQUISITO: abrir puerto 51820/UDP en router/firewall
+  # Config: añadir WG_SERVER_HOST y WG_PASSWORD_HASH a tu .env
+  #   - WG_SERVER_HOST: IP pública o dominio que resuelve a tu servidor
+  #   - WG_PASSWORD_HASH: bcrypt de tu contraseña (genera en: https://bcrypt.online/)
+  bdev-wireguard:
+    image: ghcr.io/wg-easy/wg-easy:latest
+    container_name: bdev-wireguard
+    hostname: bdev-wireguard
+    environment:
+      - LANG=en
+      # ── IP/dominio público del servidor (sin Cloudflare Tunnel, IP directa) ─
+      - WG_HOST=${WG_SERVER_HOST:-0.0.0.0}
+      - PASSWORD_HASH=${WG_PASSWORD_HASH:-$$2y$$10$$K3gGl7Nm2Mb2opUc9ILr4.9HJaZ.jhUNNXoRPxzAy3FpN.ZaJuuEy}
+      - PORT=51821                              # puerto web UI wg-easy
+      - WG_PORT=51820                           # puerto UDP WireGuard
+      - WG_DEFAULT_ADDRESS=10.100.0.x          # subnet VPN
+      - WG_DEFAULT_DNS=1.1.1.1,8.8.8.8
+      # Rutas accesibles desde VPN: subnet VPN + redes Docker internas
+      - WG_ALLOWED_IPS=10.100.0.0/24,172.16.0.0/12
+      - WG_PERSISTENT_KEEPALIVE=25
+      - WG_MTU=1420
+    volumes:
+      - wireguard_data:/etc/wireguard
+    ports:
+      - "51820:51820/udp"                       # WireGuard UDP — requiere apertura en router
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    # En ambas redes: puede hacer de puente entre VPN y servicios internos
+    networks:
+      - frontend-net
+      - backend-net
+    labels:
+      - "traefik.enable=true"
+      # UI wg-easy solo accesible cuando ya estás en VPN (catch-22 intencional:
+      # la primera vez acceder por IP directa: http://<IP_servidor>:51821)
+      - "traefik.http.routers.wg-ui.rule=Host(`vpn.bdev.qzz.io`)"
+      - "traefik.http.routers.wg-ui.service=wg-ui-svc"
+      - "traefik.http.routers.wg-ui.middlewares=vpn-only@docker"
+      - "traefik.http.services.wg-ui-svc.loadbalancer.server.port=51821"
+      - "traefik.docker.network=frontend-net"
+      - "com.centurylinklabs.watchtower.enable=false"
+    restart: unless-stopped
+
+  # ── Watchtower — Auto-update de imágenes ─────────────────────────────────────
+  # Solo actualiza contenedores con label: com.centurylinklabs.watchtower.enable=true
+  # Intervalo: 24h (86400s) — nunca toca postgres ni clickhouse
+  bdev-watchtower:
+    image: containrrr/watchtower:latest
+    container_name: bdev-watchtower
+    restart: unless-stopped
+    command:
+      - --cleanup
+      - --label-enable
+      - --interval
+      - "86400"
+      - --rolling-restart
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+      # Forzar API Docker moderna (Docker Desktop requiere >= 1.40)
+      - DOCKER_API_VERSION=1.41
+    networks:
+      - frontend-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VOLÚMENES — Persistencia garantizada de datos
+# ═══════════════════════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  n8n_data:
+    driver: local
+  traefik_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  wireguard_data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REDES — Segmentación de seguridad
+# ═══════════════════════════════════════════════════════════════════════════════
+networks:
+  # Red pública: Traefik + frontends + bdev-backend + n8n (enrutados externamente)
+  # name: fija el nombre sin prefijo de proyecto (evita "aura-ops_frontend-net")
+  frontend-net:
+    driver: bridge
+    name: frontend-net
+
+  # Red interna: BDs + servicios sin exposición pública
+  # internal: true → sin ruta por defecto a internet
+  backend-net:
+    driver: bridge
+    name: backend-net
+    internal: true

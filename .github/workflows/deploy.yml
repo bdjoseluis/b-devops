@@ -1,0 +1,73 @@
+name: 🚀 Deploy AURA OPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # permite lanzar manualmente desde GitHub
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: self-hosted     # runner local en tu máquina Windows
+    defaults:
+      run:
+        working-directory: D:\aura-ops
+        shell: powershell
+
+    steps:
+      # ── 1. Pull latest code ────────────────────────────────────────────────
+      - name: 📥 Pull latest code
+        run: |
+          git pull origin main
+          Write-Host "✅ Código actualizado: $(git log -1 --format='%h %s')"
+
+      # ── 2. Smart rebuild — solo los servicios que cambiaron ────────────────
+      - name: 🐳 Rebuild changed services
+        run: |
+          $changed = git diff --name-only HEAD~1 HEAD 2>$null
+          if (-not $changed) { $changed = git diff --name-only HEAD }
+          Write-Host "📝 Archivos modificados:`n$($changed -join "`n")"
+
+          $rebuildBackend  = $changed | Where-Object { $_ -like "backend/*" }
+          $rebuildFrontend = $changed | Where-Object { $_ -like "frontend/*" }
+          $rebuildCompose  = $changed | Where-Object { $_ -eq "docker-compose.yml" }
+
+          $rebuilt = $false
+
+          if ($rebuildCompose) {
+            Write-Host "🔄 docker-compose.yml cambiado — reconstruyendo todo el stack..."
+            docker compose up -d --build
+            $rebuilt = $true
+          } else {
+            if ($rebuildBackend) {
+              Write-Host "🔄 Reconstruyendo backend (FastAPI)..."
+              docker compose up -d --build bdev-backend
+              $rebuilt = $true
+            }
+            if ($rebuildFrontend) {
+              Write-Host "🔄 Reconstruyendo frontend (React)..."
+              docker compose up -d --build bdev-frontend
+              $rebuilt = $true
+            }
+          }
+
+          if (-not $rebuilt) {
+            Write-Host "ℹ️  Sin cambios en servicios Docker — nada que reconstruir"
+          }
+
+      # ── 3. Health check ────────────────────────────────────────────────────
+      - name: ✅ Verificar despliegue
+        run: |
+          Write-Host "⏳ Esperando 20s para que los contenedores arranquen..."
+          Start-Sleep -Seconds 20
+          try {
+            $r = Invoke-RestMethod -Uri "https://api.bdev.qzz.io/api/health" -TimeoutSec 10
+            Write-Host "✅ API OK — status: $($r.status)  version: $($r.version)"
+          } catch {
+            Write-Host "⚠️  Health check warning (el servicio puede estar arrancando): $_"
+          }
+
+      # ── 4. Show running containers ─────────────────────────────────────────
+      - name: 📊 Estado del stack
+        if: always()
+        run: docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"

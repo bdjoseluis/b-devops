@@ -1,0 +1,31 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'bdev-system'
+
+rule_files: []
+
+scrape_configs:
+
+  # ── Prometheus self-scrape ────────────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── Traefik v3 metrics ───────────────────────────────────────────────────
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['bdev-traefik:9100']
+    metrics_path: /metrics
+
+  # ── Node Exporter — métricas del host ────────────────────────────────────
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['bdev-node-exporter:9100']
+
+  # ── cAdvisor — métricas de contenedores Docker ───────────────────────────
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['bdev-cadvisor:8080']
+    metrics_path: /metrics

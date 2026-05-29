@@ -1,0 +1,52 @@
+# ── Entorno y secretos ────────────────────────────────────────────────────────
+.env
+pass.txt
+backend/config.json        # contiene API keys y contraseñas
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+backend/venv/
+backend/.venv/
+backend/env/
+backend/.env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── FastAPI / reportes generados ─────────────────────────────────────────────
+backend/reports/
+*.pdf
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+node_modules/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.dockerignore
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# ── Claude (sesiones MCP) ─────────────────────────────────────────────────────
+.claude/
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/

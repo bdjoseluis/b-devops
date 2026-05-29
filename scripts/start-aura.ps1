@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-#  AURA OPS — Startup Script
+#  B-DEVOPS — Startup Script
 #  Arranca Docker stack + Cloudflare Tunnel con una sola ejecución
 # ═══════════════════════════════════════════════════════════════════
 
@@ -16,7 +16,7 @@ Write-Host "  ██╔══██╗██║   ██║██╔══██
 Write-Host "  ██║  ██║╚██████╔╝██║  ██║██║  ██║    ╚██████╔╝██║     ███████║" -ForegroundColor Red
 Write-Host "  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝     ╚═════╝ ╚═╝     ╚══════╝" -ForegroundColor Red
 Write-Host ""
-Write-Host "  AURA OPS Startup" -ForegroundColor Cyan
+Write-Host "  B-DEVOPS Startup" -ForegroundColor Cyan
 Write-Host "  ─────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -81,10 +81,10 @@ foreach ($svc in $services) {
 
 Write-Host ""
 Write-Host "  ─────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
-Write-Host "  🚀 AURA OPS listo en:" -ForegroundColor Cyan
+Write-Host "  🚀 B-DEVOPS listo en:" -ForegroundColor Cyan
 Write-Host "     Local:   http://localhost:3000" -ForegroundColor White
 Write-Host "     Público: https://bdev.qzz.io" -ForegroundColor White
 Write-Host ""
-Write-Host "  Presiona cualquier tecla para abrir AURA OPS..."
+Write-Host "  Presiona cualquier tecla para abrir B-DEVOPS..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 Start-Process "chrome.exe" "http://localhost:3000"

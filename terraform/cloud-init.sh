@@ -5,7 +5,7 @@
 set -e
 export DEBIAN_FRONTEND=noninteractive
 
-echo "=== AURA OPS Server Setup ==="
+echo "=== B-DEVOPS Server Setup ==="
 
 # Actualizar sistema
 apt-get update -qq && apt-get upgrade -y -qq
@@ -17,7 +17,7 @@ apt-get install -y -qq curl wget git unzip
 curl -sfL https://get.k3s.io | sh -s - \
   --write-kubeconfig-mode 644 \
   --disable traefik \
-  --node-name aura-server
+  --node-name bdev-server
 
 # Esperar a que k3s esté listo
 sleep 30

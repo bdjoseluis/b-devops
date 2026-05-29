@@ -1,6 +1,6 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
-# AURA OPS — Script de deploy
+# B-DEVOPS — Script de deploy
 # Uso: ./deploy.sh [local|build|push|k8s]
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -27,17 +27,17 @@ case "${1:-local}" in
 
   build)
     echo "▶ Construyendo imágenes Docker..."
-    docker build -t "$REGISTRY/aura-backend:$TAG" ./backend
-    docker build -t "$REGISTRY/aura-frontend:$TAG" ./frontend
+    docker build -t "$REGISTRY/bdev-backend:$TAG" ./backend
+    docker build -t "$REGISTRY/bdev-frontend:$TAG" ./frontend
     echo "✅ Imágenes construidas:"
-    echo "   $REGISTRY/aura-backend:$TAG"
-    echo "   $REGISTRY/aura-frontend:$TAG"
+    echo "   $REGISTRY/bdev-backend:$TAG"
+    echo "   $REGISTRY/bdev-frontend:$TAG"
     ;;
 
   push)
     echo "▶ Subiendo imágenes a $REGISTRY..."
-    docker push "$REGISTRY/aura-backend:$TAG"
-    docker push "$REGISTRY/aura-frontend:$TAG"
+    docker push "$REGISTRY/bdev-backend:$TAG"
+    docker push "$REGISTRY/bdev-frontend:$TAG"
     echo "✅ Imágenes publicadas en $REGISTRY"
     ;;
 
@@ -45,8 +45,8 @@ case "${1:-local}" in
     echo "▶ Desplegando en Kubernetes..."
     echo ""
     echo "⚠️  Antes de continuar verifica que has editado:"
-    echo "   kubernetes/04-aura-backend.yaml  → YOUR_REGISTRY"
-    echo "   kubernetes/05-aura-frontend.yaml → YOUR_REGISTRY"
+    echo "   kubernetes/04-bdev-backend.yaml  → YOUR_REGISTRY"
+    echo "   kubernetes/05-bdev-frontend.yaml → YOUR_REGISTRY"
     echo "   kubernetes/06-ingress.yaml       → TU_DOMINIO"
     echo "   kubernetes/07-cert-manager.yaml  → TU_EMAIL"
     echo ""
@@ -56,7 +56,7 @@ case "${1:-local}" in
     kubectl apply -k ./kubernetes/
     echo ""
     echo "✅ Manifests aplicados. Comprobando pods..."
-    kubectl get pods -n aura-ops
+    kubectl get pods -n bdev-ops
     ;;
 
   stop)
@@ -66,7 +66,7 @@ case "${1:-local}" in
     ;;
 
   logs)
-    docker compose logs -f "${2:-aura-backend}"
+    docker compose logs -f "${2:-bdev-backend}"
     ;;
 
   *)
@@ -77,6 +77,6 @@ case "${1:-local}" in
     echo "  push   → subir imágenes a ghcr.io"
     echo "  k8s    → desplegar en Kubernetes"
     echo "  stop   → parar el stack local"
-    echo "  logs   → ver logs (./deploy.sh logs aura-backend)"
+    echo "  logs   → ver logs (./deploy.sh logs bdev-backend)"
     ;;
 esac

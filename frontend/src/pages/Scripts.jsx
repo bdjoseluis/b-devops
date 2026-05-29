@@ -338,7 +338,7 @@ services:
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql://user:pass@db:5432/auraops
+      DATABASE_URL: postgresql://user:pass@db:5432/bdev_ops
     networks:
       - backend-net
     depends_on:
@@ -350,7 +350,7 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: auraops
+      POSTGRES_DB: bdev_ops
       POSTGRES_USER: user
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     volumes:

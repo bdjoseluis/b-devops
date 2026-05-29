@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const SK = 'aura_workspace_v2'
+const SK = 'bdev_workspace_v2'
 
 function loadCases() {
   try { return JSON.parse(localStorage.getItem(SK)) || [] }

@@ -73,7 +73,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-gray-600 text-xs mt-4">
-          Contraseña por defecto: <code className="text-gray-400">aura2026</code> · Cámbiala en Configuración
+          Contraseña por defecto: <code className="text-gray-400">REDACTED</code> · Cámbiala en Configuración
         </p>
       </div>
     </div>

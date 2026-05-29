@@ -1,10 +1,10 @@
 @echo off
-title AURA OPS — Instalacion
+title B-DEVOPS — Instalacion
 color 0C
 
 echo.
 echo  ╔══════════════════════════════════════════╗
-echo  ║          AURA OPS — Instalacion          ║
+echo  ║          B-DEVOPS — Instalacion          ║
 echo  ║     Sistema de Ciberinteligencia OSINT   ║
 echo  ╚══════════════════════════════════════════╝
 echo.
@@ -58,9 +58,9 @@ echo [OK] Carpeta de reportes creada
 
 echo.
 echo  ╔══════════════════════════════════════════╗
-echo  ║       Instalacion completada!            ║
-echo  ║                                          ║
-echo  ║  Ejecuta: start.bat para arrancar        ║
+echo  ║     B-DEVOPS — Instalacion completada!  ║
+echo  ║                                         ║
+echo  ║  Ejecuta: start.bat para arrancar       ║
 echo  ╚══════════════════════════════════════════╝
 echo.
 pause

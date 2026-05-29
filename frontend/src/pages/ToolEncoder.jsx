@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+﻿import { useState, useCallback } from 'react'
 import ToolShell from '../components/ToolShell'
 import { Copy, CheckCircle, ArrowRight, RotateCcw } from 'lucide-react'
 
@@ -78,7 +78,7 @@ const CODECS = {
 
 const EXAMPLES = {
   base64: 'Hola mundo!',
-  hex: 'AURA OPS',
+  hex: 'B-DEVOPS',
   url: 'https://example.com/path?q=hola mundo&lang=es',
   html: '<script>alert("XSS")</script>',
   unicode: 'José Ángel 🚀',

@@ -1,5 +1,5 @@
-"""
-AURA OPS — DevOps Hub Router
+﻿"""
+B-DEVOPS — DevOps Hub Router
 Proxy para Vercel, Supabase y health checks de servicios locales (ClickHouse, n8n)
 """
 

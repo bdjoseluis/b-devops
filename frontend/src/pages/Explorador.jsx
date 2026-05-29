@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+﻿import { useState, useRef, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Plus, Trash2, X, Save, Edit3, Search } from 'lucide-react'
 
 const INITIAL_TREE = [
@@ -7,7 +7,7 @@ const INITIAL_TREE = [
       {
         id: 'f1-1', name: 'Mi Empresa', type: 'folder', children: [
           { id: 'd1', name: 'Perfil de empresa', type: 'document', content: '# Mi Empresa\n\n## Descripción\nEmpresa de ciberseguridad y desarrollo de software.\n\n## Servicios\n- Auditorías de seguridad\n- Desarrollo de software a medida\n- Consultoría IT\n- Formación en ciberseguridad\n\n## Contacto\n- Email: contacto@miempresa.com\n- Web: https://miempresa.com\n- LinkedIn: linkedin.com/company/miempresa' },
-          { id: 'd2', name: 'Mis Webs y Portfolio', type: 'document', content: '# Mis Sitios Web y Portfolio\n\n## Portfolio Personal\n- URL: https://miportfolio.com\n- GitHub: https://github.com/tu-usuario\n- Stack: Angular / React\n\n## AURA OPS\n- URL: (pendiente de deploy)\n- Repo: https://github.com/tu-usuario/aura-ops\n- Stack: FastAPI + React + Vite\n\n## Proyectos Destacados\n- **AURA OPS**: Suite OSINT y ciberseguridad\n- **Personal OS**: Dashboard personal fullstack\n\n## Redes\n- LinkedIn: linkedin.com/in/tu-usuario\n- Twitter/X: @tu-usuario\n- GitHub: github.com/tu-usuario' },
+          { id: 'd2', name: 'Mis Webs y Portfolio', type: 'document', content: '# Mis Sitios Web y Portfolio\n\n## Portfolio Personal\n- URL: https://miportfolio.com\n- GitHub: https://github.com/tu-usuario\n- Stack: Angular / React\n\n## B-DEVOPS\n- URL: (pendiente de deploy)\n- Repo: https://github.com/tu-usuario/aura-ops\n- Stack: FastAPI + React + Vite\n\n## Proyectos Destacados\n- **B-DEVOPS**: Suite OSINT y ciberseguridad\n- **Personal OS**: Dashboard personal fullstack\n\n## Redes\n- LinkedIn: linkedin.com/in/tu-usuario\n- Twitter/X: @tu-usuario\n- GitHub: github.com/tu-usuario' },
         ]
       },
       {
@@ -36,12 +36,12 @@ const INITIAL_TREE = [
   {
     id: 'f3', name: 'Desarrollo', type: 'folder', children: [
       { id: 'd8', name: 'Stack tecnológico actual', type: 'document', content: '# Stack Tecnológico\n\n## Backend\n- **Python 3.14** + FastAPI\n- Uvicorn (ASGI server)\n- Pydantic v2 (validación)\n- httpx / aiohttp (requests async)\n- python-dotenv\n\n## Frontend\n- **React 18** + Vite\n- Tailwind CSS\n- React Router v6\n- Lucide React (iconos)\n- Axios / fetch API\n\n## Herramientas OSINT\n- Shodan API\n- VirusTotal API\n- Censys API\n- Hunter.io\n- HIBP API\n- URLScan.io\n- SecurityTrails\n\n## DevOps\n- Docker + Docker Compose\n- GitHub Actions (CI/CD)\n- Nginx (reverse proxy)\n- Certbot (SSL)\n\n## IDE / Tools\n- VS Code + Claude Code\n- Postman / Insomnia\n- DBeaver (base de datos)' },
-      { id: 'd9', name: 'Comandos útiles', type: 'document', content: '# Comandos útiles del proyecto\n\n## AURA OPS — Arrancar\n```bash\n# Windows\nstart.bat\n\n# Manual\ncd backend && python -m venv venv && venv\\Scripts\\activate\npip install -r requirements.txt\nuvicorn main:app --reload --port 8000\n\n# Frontend (otra terminal)\ncd frontend && npm install && npm run dev\n```\n\n## Git\n```bash\ngit add . && git commit -m "feat: nueva funcionalidad"\ngit push origin main\ngit log --oneline -10\n```\n\n## Docker\n```bash\ndocker-compose up -d\ndocker-compose logs -f backend\ndocker ps\ndocker system prune -f\n```\n\n## Python\n```bash\npip freeze > requirements.txt\npip install -r requirements.txt\npytest tests/ -v\n```' },
+      { id: 'd9', name: 'Comandos útiles', type: 'document', content: '# Comandos útiles del proyecto\n\n## B-DEVOPS — Arrancar\n```bash\n# Windows\nstart.bat\n\n# Manual\ncd backend && python -m venv venv && venv\\Scripts\\activate\npip install -r requirements.txt\nuvicorn main:app --reload --port 8000\n\n# Frontend (otra terminal)\ncd frontend && npm install && npm run dev\n```\n\n## Git\n```bash\ngit add . && git commit -m "feat: nueva funcionalidad"\ngit push origin main\ngit log --oneline -10\n```\n\n## Docker\n```bash\ndocker-compose up -d\ndocker-compose logs -f backend\ndocker ps\ndocker system prune -f\n```\n\n## Python\n```bash\npip freeze > requirements.txt\npip install -r requirements.txt\npytest tests/ -v\n```' },
     ]
   },
   {
     id: 'f4', name: 'Notas personales', type: 'folder', children: [
-      { id: 'd10', name: 'Ideas y roadmap', type: 'document', content: '# Ideas y Roadmap\n\n## AURA OPS — Próximas features\n- [ ] n8n integration — webhook al acabar auditoría\n- [ ] Email automation — SMTP Gmail\n- [ ] Prospector province scanner UI\n- [ ] WhatsApp via Twilio\n- [ ] Login con JWT\n- [ ] Base de datos PostgreSQL\n- [ ] Deploy en VPS con Docker\n\n## Ideas de nuevos proyectos\n- Herramienta de análisis de contratos (IA)\n- Bot de Telegram para alertas OSINT\n- Chrome extension para reconocimiento pasivo\n\n## Objetivos 2026\n- [ ] Certificación OSCP\n- [ ] Publicar 3 artículos técnicos\n- [ ] 1 cliente de auditoría mensual\n- [ ] Deploy público de AURA OPS' },
+      { id: 'd10', name: 'Ideas y roadmap', type: 'document', content: '# Ideas y Roadmap\n\n## B-DEVOPS — Próximas features\n- [ ] n8n integration — webhook al acabar auditoría\n- [ ] Email automation — SMTP Gmail\n- [ ] Prospector province scanner UI\n- [ ] WhatsApp via Twilio\n- [ ] Login con JWT\n- [ ] Base de datos PostgreSQL\n- [ ] Deploy en VPS con Docker\n\n## Ideas de nuevos proyectos\n- Herramienta de análisis de contratos (IA)\n- Bot de Telegram para alertas OSINT\n- Chrome extension para reconocimiento pasivo\n\n## Objetivos 2026\n- [ ] Certificación OSCP\n- [ ] Publicar 3 artículos técnicos\n- [ ] 1 cliente de auditoría mensual\n- [ ] Deploy público de B-DEVOPS' },
     ]
   },
 ]

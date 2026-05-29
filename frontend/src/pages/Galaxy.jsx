@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Lock, Eye, EyeOff, X, ZoomIn, ZoomOut, Crosshair } from 'lucide-react'
@@ -84,7 +84,7 @@ const STARS = [
   { id:'portal',     zone:'core',     label:'Portal Admin',       icon:'🌌', color:'#e63946', x:1580, y:1060, r:20, route:'/portal',                           info:'Centro de control principal — Admin Panel' },
   { id:'herram',     zone:'core',     label:'Herramientas+',      icon:'🛠️', color:'#f59e0b', x:1420, y:1160, r:13, route:'/herramientas',                     info:'Suite de herramientas OSINT avanzadas' },
   { id:'pivot2',     zone:'core',     label:'Intelligence Pivot', icon:'🎯', color:'#e63946', x:1740, y:1160, r:11, route:'/pivot',                            info:'Análisis OSINT multi-fuente' },
-  { id:'config',     zone:'core',     label:'Configuración',      icon:'⚙️', color:'#6b7280', x:1580, y:1260, r:9,  route:'/config',                           info:'Ajustes del sistema AURA OPS' },
+  { id:'config',     zone:'core',     label:'Configuración',      icon:'⚙️', color:'#6b7280', x:1580, y:1260, r:9,  route:'/config',                           info:'Ajustes del sistema B-DEVOPS' },
   { id:'grc2',       zone:'core',     label:'GRC',                icon:'🛡️', color:'#e63946', x:1460, y:1080, r:9,  route:'/grc',                             info:'Gobernanza, Riesgo y Compliance' },
   { id:'surface2',   zone:'core',     label:'Attack Surface',     icon:'🗺️', color:'#f97316', x:1700, y:1080, r:9,  route:'/surface',                         info:'Análisis de superficie de ataque' },
 
@@ -1001,7 +1001,7 @@ export default function Galaxy() {
                 <Lock size={22} style={{ color:'#818cf8' }}/>
               </div>
               <div style={{ color:'#fff', fontWeight:800, fontSize:20, letterSpacing:'0.05em' }}>DEV<span style={{ color:'#818cf8' }}>NOVA</span></div>
-              <div style={{ color:'rgba(255,255,255,0.35)', fontSize:12, marginTop:4 }}>Acceso privado — by b-dev</div>
+              <div style={{ color:'rgba(255,255,255,0.35)', fontSize:12, marginTop:4 }}>Acceso privado — by B-DEVOPS</div>
             </div>
 
             <form onSubmit={doLogin} style={{ display:'flex', flexDirection:'column', gap:11 }}>

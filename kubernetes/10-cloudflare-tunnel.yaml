@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cloudflare Tunnel — expone todos los servicios sin abrir puertos
+#
+# Setup (1 vez):
+#   1. cloudflare.com → Zero Trust → Networks → Tunnels → Create tunnel
+#   2. Copia el token (empieza por "eyJ...")
+#   3. kubectl create secret generic cloudflare-tunnel-token \
+#        --from-literal=token=TU_TOKEN_AQUI \
+#        -n aura-ops
+#   4. kubectl apply -f 10-cloudflare-tunnel.yaml
+#
+# DNS en Cloudflare (una vez el túnel esté corriendo):
+#   aura.tudominio.com    → tunnel → aura-frontend:80
+#   api.tudominio.com     → tunnel → aura-backend:8000
+#   n8n.tudominio.com     → tunnel → n8n:5678
+#   grafana.tudominio.com → tunnel → grafana:3000
+#   crm.tudominio.com     → tunnel → twenty-server:3000
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: aura-ops
+  labels:
+    app: cloudflared
+spec:
+  replicas: 2  # 2 réplicas para alta disponibilidad
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args:
+            - tunnel
+            - --no-autoupdate
+            - run
+            - --token
+            - $(TUNNEL_TOKEN)
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflare-tunnel-token
+                  key: token
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            initialDelaySeconds: 10
+            periodSeconds: 10

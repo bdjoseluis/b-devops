@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Radio, Shield, Search, Terminal, Zap, Globe, Users,
@@ -272,7 +272,7 @@ export default function Portal() {
               </div>
               <h1 className="text-5xl font-black tracking-widest"
                 style={{ background: 'linear-gradient(135deg, #fff 0%, #c4b5fd 30%, #e63946 60%, #f9a8d4 90%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                AURA OPS
+                B-DEVOPS
               </h1>
               <p className="text-white/40 text-sm font-mono mt-2 tracking-widest uppercase">
                 Centro Operacional · v2.0
@@ -468,7 +468,7 @@ export default function Portal() {
           <div className="text-center py-8">
             <div className="inline-flex items-center gap-3 text-white/20 text-xs font-mono">
               <Radio size={11} className="text-crimson animate-pulse" />
-              AURA OPS · Solo para auditorías autorizadas · {new Date().getFullYear()}
+              B-DEVOPS · Solo para auditorías autorizadas · {new Date().getFullYear()}
               <Radio size={11} className="text-crimson animate-pulse" />
             </div>
           </div>

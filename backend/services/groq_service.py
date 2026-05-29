@@ -1,4 +1,4 @@
-"""
+﻿"""
 Groq LLM Service — ultra-fast inference via Groq Cloud
 Compatible with OpenAI API format (httpx, no extra deps)
 """
@@ -17,7 +17,7 @@ MODELS = {
 }
 
 SYSTEM_PROMPT = (
-    "Eres BDEV-AI, un asistente experto en ciberseguridad, OSINT, DevOps y desarrollo. "
+    "Eres B-DEVOPS AI, un asistente experto en ciberseguridad, OSINT, DevOps y desarrollo. "
     "Respondes siempre en español. Eres directo, técnico y preciso. "
     "Cuando recibes datos de auditorías o escaneos, identificas riesgos, "
     "recomiendas pasos concretos y explicas hallazgos con claridad. "

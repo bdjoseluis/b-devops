@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   MessageSquare, Calendar, Repeat, Star, Users, Globe,
@@ -390,7 +390,7 @@ export default function Servicios() {
           <div>
             <h3 className="text-white font-bold text-2xl mb-4">Responde mientras duermes</h3>
             <p className="text-white/50 leading-relaxed mb-6">
-              Tu negocio recibe clientes potenciales a las 3 AM. Sin automatización, los pierdes. Con AURA OPS, son atendidos, calificados y agendados automáticamente.
+              Tu negocio recibe clientes potenciales a las 3 AM. Sin automatización, los pierdes. Con B-DEVOPS, son atendidos, calificados y agendados automáticamente.
             </p>
             <div className="space-y-3">
               {[
@@ -414,7 +414,7 @@ export default function Servicios() {
             </div>
           </div>
           <div className="space-y-4">
-            <h4 className="text-white/70 font-semibold">Sin automatización vs. Con AURA OPS</h4>
+            <h4 className="text-white/70 font-semibold">Sin automatización vs. Con B-DEVOPS</h4>
             {[
               { without: 'Mensaje perdido a las 3 AM', with: 'Respuesta inmediata 24/7' },
               { without: 'Cliente potencial se va', with: 'Lead calificado y agendado' },
@@ -496,7 +496,7 @@ export default function Servicios() {
                       </div>
                     ))}
                   </div>
-                  <a href="mailto:comando1.yt@gmail.com?subject=Solicitud plan b-dev"
+                  <a href="mailto:comando1.yt@gmail.com?subject=Solicitud plan B-DEVOPS"
                     className="w-full block text-center py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
                     style={{
                       background: plan.popular ? `linear-gradient(135deg, ${plan.color}, #e63946)` : `rgba(${hexToRgb(plan.color)},0.15)`,
@@ -566,7 +566,7 @@ export default function Servicios() {
           <h3 className="text-white font-black text-2xl">¿Listo para automatizar?</h3>
           <p className="text-white/50">Configura tu primer workflow en menos de 5 minutos</p>
           <div className="flex gap-3">
-            <a href="mailto:comando1.yt@gmail.com?subject=Quiero el plan Pro b-dev"
+            <a href="mailto:comando1.yt@gmail.com?subject=Quiero el plan Pro B-DEVOPS"
               className="px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #8b5cf6, #e63946)', color: '#fff' }}>
               <Zap size={15} /> Contratar ahora
@@ -576,7 +576,7 @@ export default function Servicios() {
               <Users size={15} /> Ver CRM
             </Link>
           </div>
-          <div className="text-white/25 text-xs">b-dev · Crevillente · Alicante 🇪🇸</div>
+          <div className="text-white/25 text-xs">B-DEVOPS · Crevillente · Alicante 🇪🇸</div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { settings, auth } from '../api/client'
 import Spinner from '../components/Spinner'
 import {
@@ -548,7 +548,7 @@ export default function Configuracion() {
           <strong>Aviso legal:</strong> Las API keys y configuraciones se almacenan en un archivo local (config.json)
           en tu máquina. No se transmiten a ningún servidor externo más que a las APIs configuradas.
           El uso de esta herramienta implica la aceptación de las condiciones de uso de cada servicio integrado.
-          Solo usa AURA OPS en sistemas sobre los que tienes autorización explícita.
+          Solo usa B-DEVOPS en sistemas sobre los que tienes autorización explícita.
         </p>
       </div>
 

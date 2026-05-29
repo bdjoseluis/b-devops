@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { devops } from '../api/client'
 import {
   Server, Globe, Database, GitBranch, Zap, RefreshCw,
@@ -45,7 +45,7 @@ const EXTERNAL_SERVICES = [
   },
   {
     id: 'aura',
-    name: 'AURA OPS (local)',
+    name: 'B-DEVOPS (local)',
     url: 'http://localhost:3000',
     desc: 'Aplicación principal — acceso local',
     icon: Zap,

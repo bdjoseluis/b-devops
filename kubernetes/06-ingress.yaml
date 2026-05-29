@@ -1,0 +1,72 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Ingress para k3s con Traefik (viene instalado por defecto en k3s)
+# Prerequisitos:
+#   1. Apunta TU_DOMINIO a la IP pública de tu Oracle Cloud VM
+#   2. Instala cert-manager: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+#   3. Aplica 07-cert-manager.yaml primero
+#   4. Cambia TU_DOMINIO por tu dominio real en este archivo
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aura-ingress
+  namespace: aura-ops
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: aura-ops-redirect-https@kubernetescrd
+spec:
+  tls:
+    - hosts:
+        - TU_DOMINIO.com
+      secretName: aura-tls
+  rules:
+    - host: TU_DOMINIO.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aura-frontend
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: aura-backend
+                port:
+                  number: 8000
+          - path: /n8n
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n
+                port:
+                  number: 5678
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+          - path: /crm
+            pathType: Prefix
+            backend:
+              service:
+                name: twenty-server
+                port:
+                  number: 3000
+---
+# Middleware HTTPS redirect
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: aura-ops
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true

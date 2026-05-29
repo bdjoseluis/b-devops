@@ -1,4 +1,4 @@
-from fpdf import FPDF, XPos, YPos
+﻿from fpdf import FPDF, XPos, YPos
 from datetime import datetime
 from pathlib import Path
 import socket
@@ -27,7 +27,7 @@ def _clean(text: str, max_len: int = 200) -> str:
 REPORTS_DIR = Path(__file__).parent.parent / "reports"
 REPORTS_DIR.mkdir(exist_ok=True)
 
-# ─── Colores AURA OPS ──────────────────────────────────────────────────────────
+# ─── Colores B-DEVOPS ──────────────────────────────────────────────────────────
 CRIMSON    = (230, 57,  70)
 DARK_TEXT  = (20,  20,  40)
 MID_GRAY   = (100, 100, 120)
@@ -41,7 +41,7 @@ RISK_LOW   = (22,  163, 74)
 
 
 class AuraPDF(FPDF):
-    """PDF personalizado con header/footer de AURA OPS."""
+    """PDF personalizado con header/footer de B-DEVOPS."""
 
     def __init__(self, target: str, auditor: dict):
         super().__init__()
@@ -59,7 +59,7 @@ class AuraPDF(FPDF):
         self.set_font("Helvetica", "B", 11)
         self.set_text_color(*CRIMSON)
         self.set_xy(10, 12)
-        self.cell(0, 6, "AURA OPS - Ciberinteligencia Automatizada", align="L")
+        self.cell(0, 6, "B-DEVOPS - Ciberinteligencia Automatizada", align="L")
         # Target a la derecha
         self.set_font("Helvetica", "", 8)
         self.set_text_color(*MID_GRAY)
@@ -74,7 +74,7 @@ class AuraPDF(FPDF):
         self.set_draw_color(*CRIMSON)
         self.set_line_width(0.4)
         self.line(10, self.get_y() - 2, 200, self.get_y() - 2)
-        self.cell(0, 8, f"AURA OPS  |  Pagina {self.page_no()}  |  Generado el {datetime.now().strftime('%Y-%m-%d %H:%M')}  |  Confidencial", align="C")
+        self.cell(0, 8, f"B-DEVOPS  |  Pagina {self.page_no()}  |  Generado el {datetime.now().strftime('%Y-%m-%d %H:%M')}  |  Confidencial", align="C")
 
     # ── Auto-sanitize all text output ─────────────────────────────────────────
 
@@ -221,7 +221,7 @@ def _cover_page(pdf: AuraPDF, target: str, auditor: dict):
     pdf.set_font("Helvetica", "B", 32)
     pdf.set_text_color(*WHITE)
     pdf.set_xy(0, 12)
-    pdf.cell(210, 14, "AURA OPS", align="C")
+    pdf.cell(210, 14, "B-DEVOPS", align="C")
 
     pdf.set_font("Helvetica", "", 13)
     pdf.set_xy(0, 28)
@@ -267,7 +267,7 @@ def _cover_page(pdf: AuraPDF, target: str, auditor: dict):
 def _executive_summary(pdf: AuraPDF, ai_text: str, target: str, data: dict):
     pdf.section_title("Resumen Ejecutivo")
     text = ai_text if ai_text else (
-        f"Reporte OSINT generado automáticamente por AURA OPS para el objetivo: {target}. "
+        f"Reporte OSINT generado automáticamente por B-DEVOPS para el objetivo: {target}. "
         "Se han recopilado y correlacionado datos de múltiples fuentes de inteligencia open-source "
         "incluyendo DNS, WHOIS, SSL/TLS, Shodan, VirusTotal y subdominios."
     )
@@ -499,7 +499,7 @@ def _footer_signature(pdf: AuraPDF, auditor: dict):
     pdf.set_xy(20, 250)
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(*WHITE)
-    pdf.cell(0, 10, "AURA OPS — Sistema de Ciberinteligencia Automatizada", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 10, "B-DEVOPS — Sistema de Ciberinteligencia Automatizada", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 9)
     pdf.set_xy(20, 264)
     pdf.cell(0, 5, "Este informe es CONFIDENCIAL. Uso exclusivo del destinatario autorizado.")

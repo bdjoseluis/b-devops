@@ -1,5 +1,5 @@
-"""
-AURA OPS — Auto Audit Router
+﻿"""
+B-DEVOPS — Auto Audit Router
 Unified endpoint: one input → all applicable OSINT modules in parallel → auto report
 Supports: email, IP, domain, phone number, social username, URL
 """
@@ -169,7 +169,7 @@ async def full_audit(body: dict):
                     )
                     email_result = await smtp_service.send_report_email(
                         to_email=smtp_cfg["to"],
-                        subject=f"AURA OPS — Auditoría {target} [{risk}]",
+                        subject=f"B-DEVOPS — Auditoría {target} [{risk}]",
                         docx_path=filepath,
                         body_text=email_body,
                     )

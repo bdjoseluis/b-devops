@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+﻿import { useLocation, useNavigate } from 'react-router-dom'
 import { Clock, ArrowLeft, Radio } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { health } from '../api/client'
@@ -55,7 +55,7 @@ export default function TopBar() {
     return () => clearInterval(interval)
   }, [])
 
-  const page = PAGE_TITLES[location.pathname] || { title: 'AURA OPS', icon: '🌌' }
+  const page = PAGE_TITLES[location.pathname] || { title: 'B-DEVOPS', icon: '🌌' }
 
   return (
     <header style={{

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import {
   Globe, Database, Zap, CheckCircle, XCircle, Clock,
   ExternalLink, RefreshCw, AlertTriangle, Server, Box,
@@ -582,7 +582,7 @@ function DeployGuide() {
       color: 'text-orange-400',
       content: [
         { type: 'text', value: 'Airbyte necesita mucha RAM (4GB+). En Oracle ARM con 24GB es factible.' },
-        { type: 'code', lang: 'bash', value: '# En tu Oracle Cloud VM\ngit clone https://github.com/airbytehq/airbyte.git\ncd airbyte\n./run-ab-platform.sh\n\n# Accede en http://TU_IP:8000\n# Usuario: airbyte / Contraseña: password\n\n# Configura connectors:\n#  Source: AURA OPS API (HTTP connector)\n#  Destination: ClickHouse\n#  → Los datos de auditorías fluyen automáticamente a ClickHouse' },
+        { type: 'code', lang: 'bash', value: '# En tu Oracle Cloud VM\ngit clone https://github.com/airbytehq/airbyte.git\ncd airbyte\n./run-ab-platform.sh\n\n# Accede en http://TU_IP:8000\n# Usuario: airbyte / Contraseña: password\n\n# Configura connectors:\n#  Source: B-DEVOPS API (HTTP connector)\n#  Destination: ClickHouse\n#  → Los datos de auditorías fluyen automáticamente a ClickHouse' },
       ]
     },
   ]

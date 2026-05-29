@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
 from pydantic import BaseModel
 from config_manager import load_config, save_config
 from pathlib import Path
@@ -68,7 +68,7 @@ async def test_kali():
     from services.kali_service import run_raw, is_configured
     if not is_configured():
         return {"status": "error", "message": "Kali SSH not configured"}
-    result = await run_raw("echo 'AURA OPS Connection OK' && uname -a")
+    result = await run_raw("echo 'B-DEVOPS Connection OK' && uname -a")
     return {"status": "ok" if result.get("exit_code") == 0 else "error", "output": result.get("output", "")}
 
 

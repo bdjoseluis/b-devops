@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { reports, osint } from '../api/client'
 import Spinner from '../components/Spinner'
 import { FileText, Download, Plus, Trash2, RefreshCw, File } from 'lucide-react'
@@ -187,7 +187,7 @@ export default function Reportes() {
         {[
           { title: 'Contenido del reporte', items: ['Datos WHOIS y DNS', 'Certificado SSL/TLS', 'Subdominios activos', 'Puertos y servicios Shodan', 'Reputación VirusTotal', 'Emails corporativos', 'Matriz de riesgos'] },
           { title: 'Análisis IA incluido', items: ['Resumen ejecutivo', 'Hallazgos principales', 'Nivel de riesgo global', 'Vectores de ataque', 'Recomendaciones priorizadas', 'Score de exposición'] },
-          { title: 'Formato profesional', items: ['Logo AURA OPS', 'Datos del auditor', 'Fecha y IP del análisis', 'Tablas estructuradas', 'Código de colores por riesgo', 'Espacio para firma digital'] },
+          { title: 'Formato profesional', items: ['Logo B-DEVOPS', 'Datos del auditor', 'Fecha y IP del análisis', 'Tablas estructuradas', 'Código de colores por riesgo', 'Espacio para firma digital'] },
         ].map(section => (
           <div key={section.title} className="card border-surface-border/50">
             <p className="text-yellow-400 font-semibold text-sm mb-3">{section.title}</p>

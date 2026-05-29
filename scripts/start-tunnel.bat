@@ -1,0 +1,1 @@
+powershell -WindowStyle Hidden -Command "& 'C:\Program Files (x86)\cloudflared\cloudflared.exe' tunnel --config 'C:\Users\josbo\.cloudflared\config.yml' --no-autoupdate run"

@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
+﻿import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Search, Terminal, Shield, FileText,
   Settings, Zap, ChevronRight, Radio, Wrench, Mail,
@@ -75,7 +75,7 @@ export default function Sidebar() {
             <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full pulse-dot border-2 border-dark-200" />
           </div>
           <div>
-            <div className="text-white font-bold text-lg tracking-wider">AURA OPS</div>
+            <div className="text-white font-bold text-lg tracking-wider">B-DEVOPS</div>
             <div className="text-gray-500 text-xs font-mono">v2.0 · OSINT Suite</div>
           </div>
         </div>

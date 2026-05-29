@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 from pathlib import Path
 
 # Add backend dir to path so imports work
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="B-DEV API",
+    title="B-DEVOPS API",
     description="Sistema de Ciberinteligencia y OSINT Automatizado",
     version="2.0.0",
     lifespan=lifespan
@@ -64,7 +64,7 @@ app.include_router(monitor_router.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "AURA OPS", "version": "1.0.0"}
+    return {"status": "ok", "service": "B-DEVOPS", "version": "1.0.0"}
 
 
 if __name__ == "__main__":

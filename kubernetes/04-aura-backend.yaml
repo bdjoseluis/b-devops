@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aura-backend
+  namespace: aura-ops
+  labels:
+    app: aura-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aura-backend
+  template:
+    metadata:
+      labels:
+        app: aura-backend
+    spec:
+      containers:
+        - name: aura-backend
+          image: aura-backend:local
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: postgresql://aura:CHANGE_ME_STRONG_PASSWORD@postgres:5432/aura_ops
+            - name: CLICKHOUSE_HOST
+              value: clickhouse
+            - name: CLICKHOUSE_PORT
+              value: "8123"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.json
+              subPath: config.json
+            - name: reports
+              mountPath: /app/reports
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: config
+          configMap:
+            name: aura-config
+        - name: reports
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aura-config
+  namespace: aura-ops
+data:
+  config.json: |
+    {
+      "auditor": { "name": "", "company": "", "email": "", "jurisdiction": "COBERTURA GLOBAL" },
+      "apis": {},
+      "kali_ssh": { "enabled": false }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aura-backend
+  namespace: aura-ops
+spec:
+  selector:
+    app: aura-backend
+  ports:
+    - port: 8000
+      targetPort: 8000

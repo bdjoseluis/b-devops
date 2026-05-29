@@ -1,4 +1,4 @@
-import smtplib
+﻿import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -30,7 +30,7 @@ async def send_report_email(to_email: str, subject: str, docx_path: str = "", bo
         msg["To"] = to_email
         msg["Subject"] = subject
 
-        body = body_text or "AURA OPS — Informe de auditoría adjunto.\n\nGenerado automáticamente por AURA OPS."
+        body = body_text or "B-DEVOPS — Informe de auditoría adjunto.\n\nGenerado automáticamente por B-DEVOPS."
         msg.attach(MIMEText(body, "plain", "utf-8"))
 
         docx_file = Path(docx_path) if docx_path else None

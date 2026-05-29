@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import {
   GitBranch, Play, Pause, RefreshCw, ExternalLink, Zap,
   CheckCircle, XCircle, AlertTriangle, Loader2, Clock,
@@ -249,9 +249,9 @@ export default function N8nHub() {
       {tab === 'info' && (
         <div className="space-y-4">
           <div className="bg-dark-200 border border-surface-border rounded-xl p-5 space-y-4">
-            <h2 className="text-white font-semibold">Integración AURA OPS ↔ n8n</h2>
+            <h2 className="text-white font-semibold">Integración B-DEVOPS ↔ n8n</h2>
             <p className="text-gray-400 text-sm leading-relaxed">
-              n8n corre en <code className="bg-dark-300 text-orange-300 px-1.5 py-0.5 rounded text-xs">http://localhost:5678</code> y puede recibir webhooks desde AURA OPS.
+              n8n corre en <code className="bg-dark-300 text-orange-300 px-1.5 py-0.5 rounded text-xs">http://localhost:5678</code> y puede recibir webhooks desde B-DEVOPS.
               Crea workflows en n8n que se activen via HTTP Request y úsalos para automatizar reportes, alertas, y análisis.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

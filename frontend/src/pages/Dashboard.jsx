@@ -1,4 +1,4 @@
-import { useNavigate, Link } from 'react-router-dom'
+﻿import { useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { settings, devops } from '../api/client'
 import {
@@ -158,7 +158,7 @@ export default function Dashboard() {
               { label:'Frontend (DEVNOVA)',  status:'online',  color:'#10b981', extra:'localhost:3000' },
               { label:'Backend API',         status:'online',  color:'#10b981', extra:'localhost:8000' },
               { label:'PostgreSQL',          status:'online',  color:'#10b981', extra:'localhost:5432' },
-              { label:'Portfolio (b-dev)',   status: 'online', color:'#10b981', extra:'localhost:3001' },
+              { label:'Portfolio (B-DEVOPS)',   status: 'online', color:'#10b981', extra:'localhost:3001' },
               { label:'Cloudflare Tunnel',   status:'active',  color:'#f59e0b', extra:'bdev.qzz.io' },
             ].map(s => (
               <div key={s.label} style={{ display:'flex', alignItems:'center', gap:10 }}>

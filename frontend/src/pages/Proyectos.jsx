@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 
 const STORAGE_KEY = 'aura_proyectos'
 import { Github, Globe, ExternalLink, Plus, Pencil, Trash2, BookOpen, X, Save } from 'lucide-react'
@@ -13,11 +13,11 @@ const STATUS_OPTIONS = [
 
 const SEED_PROJECTS = [
   {
-    id: 1, title: 'AURA OPS', description: 'Suite de ciberseguridad y OSINT full-stack. FastAPI + React. Auto-auditorías, herramientas OSINT, GRC, Attack Surface monitor.',
+    id: 1, title: 'B-DEVOPS', description: 'Suite de ciberseguridad y OSINT full-stack. FastAPI + React. Auto-auditorías, herramientas OSINT, GRC, Attack Surface monitor.',
     githubUrl: 'https://github.com/', liveUrl: '',
     technologies: 'Python, FastAPI, React, Vite, Tailwind, Shodan, VirusTotal',
     status: 'EN_PROGRESO', isVisible: true,
-    documentation: '# AURA OPS\n\nSuite de ciberseguridad OSINT full-stack.\n\n## Stack\n- Backend: Python + FastAPI\n- Frontend: React + Vite + Tailwind\n\n## Módulos\n- Auto Auditoría\n- Ciber Inteligencia (OSINT)\n- Herramientas+\n- Matriz GRC\n- Attack Surface Monitor\n- BCP'
+    documentation: '# B-DEVOPS\n\nSuite de ciberseguridad OSINT full-stack.\n\n## Stack\n- Backend: Python + FastAPI\n- Frontend: React + Vite + Tailwind\n\n## Módulos\n- Auto Auditoría\n- Ciber Inteligencia (OSINT)\n- Herramientas+\n- Matriz GRC\n- Attack Surface Monitor\n- BCP'
   },
   {
     id: 2, title: 'Portfolio Personal', description: 'Portfolio web personal con proyectos, habilidades y contacto.',

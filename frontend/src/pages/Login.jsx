@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Radio, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import Spinner from '../components/Spinner'
@@ -32,7 +32,7 @@ export default function Login() {
           <div className="w-16 h-16 bg-crimson rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-crimson/30">
             <Radio size={32} className="text-white" />
           </div>
-          <h1 className="text-white font-bold text-2xl tracking-wider">AURA OPS</h1>
+          <h1 className="text-white font-bold text-2xl tracking-wider">B-DEVOPS</h1>
           <p className="text-gray-500 text-sm mt-1">Sistema de Ciberinteligencia OSINT</p>
         </div>
 

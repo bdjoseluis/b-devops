@@ -1,5 +1,5 @@
-"""
-B-DEV — Auth router
+﻿"""
+B-DEVOPS — Auth router
 - Admin: single-password JWT (stored in config.json)
 - Users: register → admin email approval → login with username+password
 - JWT tokens (HS256, 7 days)
@@ -213,7 +213,7 @@ async def register(body: dict):
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#0a0a1a;color:#e2e8f0;border-radius:12px">
-      <h2 style="color:#818cf8">🔐 Nueva solicitud de acceso — B-DEV</h2>
+      <h2 style="color:#818cf8">🔐 Nueva solicitud de acceso — B-DEVOPS</h2>
       <table style="width:100%;border-collapse:collapse;margin:16px 0">
         <tr><td style="padding:8px;color:#94a3b8">Usuario:</td><td style="padding:8px;font-weight:bold">{username}</td></tr>
         <tr><td style="padding:8px;color:#94a3b8">Email:</td><td style="padding:8px">{email}</td></tr>
@@ -227,7 +227,7 @@ async def register(body: dict):
       <p style="color:#64748b;font-size:12px;margin-top:20px">También puedes gestionar usuarios en <a href="{base_url}/config" style="color:#818cf8">{base_url}/config</a></p>
     </div>
     """
-    _send_email(admin_to, f"[B-DEV] Nueva solicitud de acceso: {username}", html)
+    _send_email(admin_to, f"[B-DEVOPS] Nueva solicitud de acceso: {username}", html)
 
     return {"status": "pending", "message": "Solicitud enviada. Recibirás un email cuando el admin la revise."}
 
@@ -256,12 +256,12 @@ async def approve_user(user_id: str):
     # Email al usuario
     _send_email(
         user["email"],
-        "✅ Tu acceso a B-DEV ha sido aprobado",
+        "✅ Tu acceso a B-DEVOPS ha sido aprobado",
         f"""
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;background:#0a0a1a;color:#e2e8f0;border-radius:12px">
           <h2 style="color:#10b981">✅ Acceso aprobado</h2>
-          <p>Hola <strong>{user["username"]}</strong>, tu cuenta en B-DEV ha sido aprobada.</p>
-          <a href="https://app.bdev.qzz.io" style="background:#818cf8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:12px">🚀 Entrar a B-DEV</a>
+          <p>Hola <strong>{user["username"]}</strong>, tu cuenta en B-DEVOPS ha sido aprobada.</p>
+          <a href="https://app.bdev.qzz.io" style="background:#818cf8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:12px">🚀 Entrar a B-DEVOPS</a>
         </div>
         """
     )
@@ -288,7 +288,7 @@ async def reject_user(user_id: str):
 
     _send_email(
         user["email"],
-        "❌ Tu solicitud de acceso a B-DEV",
+        "❌ Tu solicitud de acceso a B-DEVOPS",
         f"""
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;background:#0a0a1a;color:#e2e8f0;border-radius:12px">
           <h2 style="color:#ef4444">Solicitud no aprobada</h2>

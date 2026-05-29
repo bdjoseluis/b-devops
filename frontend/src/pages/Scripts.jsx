@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { Copy, Check, Download, ChevronDown, ChevronRight, Search } from 'lucide-react'
 
 const CATEGORIES = [
@@ -234,7 +234,7 @@ jobs:
 DOMAIN="tudominio.com"
 APP_DIR="/var/www/aura-ops"
 
-echo "🚀 Desplegando AURA OPS en Nginx..."
+echo "🚀 Desplegando B-DEVOPS en Nginx..."
 
 cd $APP_DIR
 git pull origin main
@@ -276,7 +276,7 @@ echo "🌐 App disponible en https://$DOMAIN"
 #   sudo systemctl start aura-backend
 
 [Unit]
-Description=AURA OPS — FastAPI Backend
+Description=B-DEVOPS — FastAPI Backend
 After=network.target
 
 [Service]
@@ -431,7 +431,7 @@ output "server_ip" {
 }
 
 # --- ansible/playbook.yml ---
-# - name: Configurar servidor AURA OPS
+# - name: Configurar servidor B-DEVOPS
 #   hosts: all
 #   become: true
 #   tasks:
@@ -466,11 +466,11 @@ Sitemap: https://tudominio.com/sitemap.xml
 ## 2. Meta tags en index.html
 \`\`\`html
 <head>
-  <title>AURA OPS | Suite de Ciberseguridad</title>
+  <title>B-DEVOPS | Suite de Ciberseguridad</title>
   <meta name="description" content="Suite OSINT y ciberseguridad full-stack.">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="AURA OPS">
+  <meta property="og:title" content="B-DEVOPS">
   <meta property="og:description" content="Suite OSINT y ciberseguridad">
   <meta property="og:image" content="https://tudominio.com/og-image.png">
   <meta property="og:url" content="https://tudominio.com">

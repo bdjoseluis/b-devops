@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 
 const API = '/api/ai/groq'
 
@@ -135,7 +135,7 @@ export default function ToolGroq() {
         <div style={{ fontSize: '20px' }}>⚡</div>
         <div>
           <div style={{ fontWeight: 700, fontSize: '14px', color: '#a78bfa' }}>GROQ AI CHAT</div>
-          <div style={{ fontSize: '11px', color: '#666' }}>Ultra-fast LLM inference · B-Dev Security Assistant</div>
+          <div style={{ fontSize: '11px', color: '#666' }}>Ultra-fast LLM inference · B-DEVOPS Security Assistant</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
           {totalTokens > 0 && (

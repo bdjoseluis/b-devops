@@ -1,5 +1,5 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# B-DEV SYSTEM — Stack de infraestructura unificado
+﻿# ═══════════════════════════════════════════════════════════════════════════════
+# B-DEVOPS SYSTEM — Stack de infraestructura unificado
 #
 # Arquitectura de redes:
 #   frontend-net  → Traefik + servicios web expuestos públicamente
@@ -8,7 +8,7 @@
 #
 # Subdominios (vía Cloudflare Tunnel → Traefik):
 #   bdev.qzz.io         → bdev-portfolio   (CV / Portfolio)
-#   app.bdev.qzz.io     → bdev-frontend    (Plataforma B-Dev)
+#   app.bdev.qzz.io     → bdev-frontend    (Plataforma B-DEVOPS)
 #   api.bdev.qzz.io     → bdev-backend     (API FastAPI)
 #   crm.bdev.qzz.io     → bdev-n8n         (/webhook/* público, UI solo con VPN)
 #   monitor.bdev.qzz.io → Grafana + Traefik dashboard (basic auth + VPN)
@@ -111,7 +111,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── bdev-frontend — Plataforma B-Dev (React/Nginx) ──────────────────────────
+  # ── bdev-frontend — Plataforma B-DEVOPS (React/Nginx) ──────────────────────────
   bdev-frontend:
     build:
       context: ./frontend

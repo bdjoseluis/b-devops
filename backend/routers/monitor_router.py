@@ -1,5 +1,5 @@
-"""
-AURA OPS — Uptime Monitor Router
+﻿"""
+B-DEVOPS — Uptime Monitor Router
 Comprueba URLs y devuelve status, latencia y SSL
 """
 import ssl

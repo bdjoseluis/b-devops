@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { ai, scan } from '../api/client'
 import Spinner from '../components/Spinner'
 import { Send, Trash2, Terminal as TerminalIcon, Zap, Copy } from 'lucide-react'
@@ -18,7 +18,7 @@ export default function Terminal() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: '```\nAURA OPS — Terminal de Inteligencia Artificial\nPotenciado por Gemini Flash · Solo auditorías autorizadas\n```\n\n¡Bienvenido! Soy AURA, tu asistente de ciberseguridad. Puedo ayudarte a:\n\n- **Analizar resultados** de OSINT y scans\n- **Guiar el pentest** paso a paso\n- **Interpretar vulnerabilidades** y CVEs\n- **Generar contenido** para reportes\n- **Responder dudas** sobre seguridad ofensiva/defensiva\n\nEscribe tu consulta o usa los comandos rápidos de arriba.',
+      content: '```\nB-DEVOPS — Terminal de Inteligencia Artificial\nPotenciado por Gemini Flash · Solo auditorías autorizadas\n```\n\n¡Bienvenido! Soy AURA, tu asistente de ciberseguridad. Puedo ayudarte a:\n\n- **Analizar resultados** de OSINT y scans\n- **Guiar el pentest** paso a paso\n- **Interpretar vulnerabilidades** y CVEs\n- **Generar contenido** para reportes\n- **Responder dudas** sobre seguridad ofensiva/defensiva\n\nEscribe tu consulta o usa los comandos rápidos de arriba.',
       timestamp: new Date(),
     }
   ])

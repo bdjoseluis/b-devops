@@ -1,5 +1,5 @@
-"""
-AURA OPS — ClickHouse Service
+﻿"""
+B-DEVOPS — ClickHouse Service
 Writes analytics data to ClickHouse via its HTTP interface.
 Falls back silently if ClickHouse is unavailable.
 """

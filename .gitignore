@@ -1,7 +1,8 @@
 # ── Entorno y secretos ────────────────────────────────────────────────────────
 .env
 pass.txt
-backend/config.json        # contiene API keys y contraseñas
+# config.json contiene API keys, contraseñas y pines — NUNCA al repo
+backend/config.json
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/

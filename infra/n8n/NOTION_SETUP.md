@@ -29,9 +29,20 @@ Pasos para conectar B-DEVOPS con Notion via n8n.
 3. En la base de datos B-DEVOPS Clientes -> **...** -> **Connections** -> busca y añade "proyecto"
 4. El token de la integracion es: `REDACTED`
 
-## 3. Importar workflows en n8n
+## 3. Importar workflows en n8n (OPCIÓN AUTOMÁTICA — recomendada)
 
-1. Accede a n8n: `https://crm.bdev.qzz.io` (desde VPN) o via VPN en `http://10.100.0.1:5678`
+Con n8n corriendo, ejecuta en PowerShell:
+
+```powershell
+cd D:\aura-ops\infra\n8n
+.\setup-n8n.ps1 -NotionDbId "TU_NOTION_DB_ID_AQUI"
+```
+
+Este script: crea la credencial Notion, importa y activa ambos workflows automáticamente.
+
+## 3b. Importar workflows en n8n (MANUAL)
+
+1. Accede a n8n: `https://crm.bdev.qzz.io` (desde VPN) o `http://10.100.0.1:5678`
 2. **Workflow 1:** Importa `workflow-user-register.json`
    - Reemplaza `YOUR_NOTION_DATABASE_ID_HERE` con el ID de tu BD
    - Configura credencial Notion con el token

@@ -3,8 +3,8 @@ import api from '../api/client'
 
 const AuthContext = createContext(null)
 
-const TOKEN_KEY  = 'aura_token'
-const ROLE_KEY   = 'aura_role'
+const TOKEN_KEY  = 'bdev_token'
+const ROLE_KEY   = 'bdev_role'
 
 export function AuthProvider({ children }) {
   const [token,    setToken]    = useState(() => localStorage.getItem(TOKEN_KEY))

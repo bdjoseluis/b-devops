@@ -64,7 +64,7 @@ app.include_router(monitor_router.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "B-DEVOPS", "version": "1.0.0"}
+    return {"status": "ok", "service": "B-DEVOPS", "version": "2.0.0"}
 
 
 if __name__ == "__main__":

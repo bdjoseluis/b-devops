@@ -9,6 +9,7 @@ import os
 import time
 import hmac
 import hashlib
+import secrets
 import base64
 import json
 import uuid
@@ -54,8 +55,27 @@ def _verify(token: str) -> dict | None:
         return None
 
 def _hash_pw(password: str) -> str:
-    """Simple SHA-256 hash for user passwords."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """PBKDF2-SHA256 with random 16-byte salt.
+    Format stored: pbkdf2:sha256:260000:<salt_hex>:<hash_hex>
+    """
+    salt = secrets.token_hex(16)
+    dk   = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 260_000)
+    return f"pbkdf2:sha256:260000:{salt}:{dk.hex()}"
+
+def _verify_pw(password: str, stored: str) -> bool:
+    """Constant-time verify password against stored hash.
+    Supports both new PBKDF2 format and legacy raw SHA-256 (auto-upgrades on next login).
+    """
+    if stored.startswith('pbkdf2:sha256:'):
+        parts = stored.split(':')
+        if len(parts) == 5:
+            _, _, iters, salt, expected = parts
+            dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), int(iters))
+            return hmac.compare_digest(dk.hex(), expected)
+        return False
+    # Legacy fallback: raw SHA-256 (no salt — old registrations)
+    legacy = hashlib.sha256(password.encode()).hexdigest()
+    return hmac.compare_digest(legacy, stored)
 
 
 # ── Auth dependencies ─────────────────────────────────────────────────────────
@@ -173,8 +193,20 @@ async def login(body: dict):
         raise HTTPException(status_code=403, detail="Tu cuenta está pendiente de aprobación")
     if user["status"] == "rejected":
         raise HTTPException(status_code=403, detail="Tu solicitud fue rechazada")
-    if user["password_hash"] != _hash_pw(password):
+    if not _verify_pw(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
+    # Auto-upgrade legacy SHA-256 hash → PBKDF2 on successful login
+    if not user["password_hash"].startswith('pbkdf2:'):
+        try:
+            conn2 = await get_db()
+            await conn2.execute(
+                "UPDATE users SET password_hash=$1 WHERE id=$2",
+                _hash_pw(password), user["id"]
+            )
+            await conn2.close()
+        except Exception:
+            pass  # Non-fatal — will retry on next login
 
     token = _sign({
         "sub":  user["username"],

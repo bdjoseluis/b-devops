@@ -76,6 +76,13 @@ export const auth = {
   verifyAdmin: (pin) => api.post('/auth/verify-admin', { pin }).then(r => r.data),
   changeAdminPin: (current, new_pin) => api.post('/auth/change-admin-pin', { current, new_pin }).then(r => r.data),
   changePassword: (new_password) => api.post('/auth/change-password', { new_password }).then(r => r.data),
+  register: (username, email, password, reason = '') =>
+    api.post('/auth/register', { username, email, password, reason }).then(r => r.data),
+  listUsers: () => api.get('/auth/users').then(r => r.data),
+  approveUser: (user_id) => api.get(`/auth/approve/${user_id}`).then(r => r.data),
+  rejectUser: (user_id) => api.get(`/auth/reject/${user_id}`).then(r => r.data),
+  deleteUser: (user_id) => api.delete(`/auth/users/${user_id}`).then(r => r.data),
+  me: () => api.get('/auth/me').then(r => r.data),
 }
 
 export const tools = {

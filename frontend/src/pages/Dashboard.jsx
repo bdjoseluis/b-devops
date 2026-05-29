@@ -63,7 +63,7 @@ export default function Dashboard() {
             <div style={{ width:3, height:32, background:'linear-gradient(180deg,#a855f7,#e63946)', borderRadius:2 }}/>
             <div>
               <h1 style={{ color:'#fff', fontSize:28, fontWeight:900, letterSpacing:'-0.02em', margin:0, lineHeight:1.1 }}>
-                DEV<span style={{ color:'#a78bfa' }}>NOVA</span>
+                B-<span style={{ color:'#a78bfa' }}>DEVOPS</span>
               </h1>
               <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, marginTop:2, letterSpacing:'0.08em' }}>
                 GALAXY OPS PLATFORM · {totalTools}+ HERRAMIENTAS ACTIVAS
@@ -155,7 +155,7 @@ export default function Dashboard() {
           </div>
           <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, padding:'16px', display:'flex', flexDirection:'column', gap:10 }}>
             {[
-              { label:'Frontend (DEVNOVA)',  status:'online',  color:'#10b981', extra:'localhost:3000' },
+              { label:'Frontend (B-DEVOPS)',  status:'online',  color:'#10b981', extra:'localhost:3000' },
               { label:'Backend API',         status:'online',  color:'#10b981', extra:'localhost:8000' },
               { label:'PostgreSQL',          status:'online',  color:'#10b981', extra:'localhost:5432' },
               { label:'Portfolio (B-DEVOPS)',   status: 'online', color:'#10b981', extra:'localhost:3001' },

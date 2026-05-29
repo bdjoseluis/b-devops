@@ -3,10 +3,12 @@ import api from '../api/client'
 
 const AuthContext = createContext(null)
 
-const TOKEN_KEY = 'aura_token'
+const TOKEN_KEY  = 'aura_token'
+const ROLE_KEY   = 'aura_role'
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
+  const [token,    setToken]    = useState(() => localStorage.getItem(TOKEN_KEY))
+  const [role,     setRole]     = useState(() => localStorage.getItem(ROLE_KEY) || 'user')
   const [checking, setChecking] = useState(true)
 
   // Set axios header whenever token changes
@@ -17,20 +19,31 @@ export function AuthProvider({ children }) {
     } else {
       delete api.defaults.headers.common['Authorization']
       localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(ROLE_KEY)
     }
     setChecking(false)
   }, [token])
 
-  const login = async (password) => {
-    const res = await api.post('/auth/login', { password }).then(r => r.data)
+  /** Admin login: just password.  User login: username + password. */
+  const login = async (password, username = null) => {
+    const body = username ? { username, password } : { password }
+    const res  = await api.post('/auth/login', body).then(r => r.data)
     setToken(res.token)
+    const r = res.role || 'user'
+    setRole(r)
+    localStorage.setItem(ROLE_KEY, r)
     return res
   }
 
-  const logout = () => setToken(null)
+  const logout = () => {
+    setToken(null)
+    setRole('user')
+  }
+
+  const isAdmin = role === 'admin' || role === 'superadmin'
 
   return (
-    <AuthContext.Provider value={{ token, login, logout, checking }}>
+    <AuthContext.Provider value={{ token, role, isAdmin, login, logout, checking }}>
       {children}
     </AuthContext.Provider>
   )

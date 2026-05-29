@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { auth as authApi } from '../api/client'
 import { Lock, Eye, EyeOff, X, ZoomIn, ZoomOut, Crosshair } from 'lucide-react'
 
 // ─── World dimensions ─────────────────────────────────────────────────────────
@@ -63,9 +64,9 @@ const STARS = [
   { id:'devops',     zone:'infra',    label:'DevOps Hub',         icon:'☁️', color:'#06b6d4', x:1720, y:1870, r:11, route:'/devops',                           info:'CI/CD y herramientas DevOps' },
   { id:'command',    zone:'infra',    label:'Command Center',     icon:'⚡', color:'#22d3ee', x:1520, y:2060, r:11, route:'/command',                          info:'Centro de comandos operacional' },
   { id:'scripts',    zone:'infra',    label:'Scripts',            icon:'📝', color:'#10b981', x:1660, y:2080, r:9,  route:'/scripts',                          info:'Scripts y automatizaciones personalizadas' },
-  { id:'n8n',        zone:'infra',    label:'n8n Workflows',      icon:'🔗', color:'#f97316', x:1750, y:1980, r:10, url:'http://localhost:5678',                info:'Automatización de workflows (local)' },
-  { id:'clickhouse', zone:'infra',    label:'ClickHouse',         icon:'📊', color:'#f59e0b', x:1400, y:2000, r:8,  url:'http://localhost:8123/play',           info:'Analítica con ClickHouse (local)' },
-  { id:'swagger',    zone:'infra',    label:'API Swagger',        icon:'📚', color:'#10b981', x:1720, y:2080, r:8,  url:'http://localhost:8000/docs',           info:'Documentación de la API REST' },
+  { id:'n8n',        zone:'infra',    label:'n8n Workflows',      icon:'🔗', color:'#f97316', x:1750, y:1980, r:10, url:'https://crm.bdev.qzz.io',             info:'Automatizacion de workflows — n8n' },
+  { id:'clickhouse', zone:'infra',    label:'ClickHouse',         icon:'📊', color:'#f59e0b', x:1400, y:2000, r:8,  url:'https://app.bdev.qzz.io:8123/play',   info:'Analitica con ClickHouse' },
+  { id:'swagger',    zone:'infra',    label:'API Swagger',        icon:'📚', color:'#10b981', x:1720, y:2080, r:8,  url:'https://api.bdev.qzz.io/docs',        info:'Documentacion de la API REST' },
   { id:'ipcalc',     zone:'infra',    label:'IP Calculator',      icon:'🔢', color:'#22d3ee', x:1830, y:1950, r:9,  route:'/tool/ipcalc',                      info:'Calculadora de subredes CIDR — IPv4/IPv6' },
   { id:'portscan',   zone:'infra',    label:'Port Scanner',       icon:'🔌', color:'#f97316', x:1860, y:2060, r:9,  route:'/tool/portscan',                    info:'Escáner de puertos TCP — detección de servicios' },
   { id:'cronhelper', zone:'infra',    label:'Cron Helper',        icon:'⏰', color:'#10b981', x:1950, y:1980, r:9,  route:'/tool/cronhelper',                  info:'Generador de expresiones cron con preview de ejecuciones' },
@@ -107,7 +108,7 @@ const STARS = [
   { id:'domains',    zone:'web',      label:'Dominios',           icon:'🏷️', color:'#f87171', x:2940, y:1820, r:8,  url:'https://dash.domain.digitalplat.org',  info:'Gestión de dominios y DNS' },
   { id:'supabase',   zone:'web',      label:'Supabase',           icon:'⚡', color:'#3ecf8e', x:3000, y:1680, r:10, url:'https://supabase.com/dashboard',       info:'Base de datos PostgreSQL + Auth + API' },
   { id:'notion',     zone:'web',      label:'Notion',             icon:'📓', color:'#e2e8f0', x:2980, y:1820, r:8,  url:'https://notion.so',                    info:'Docs y wikis del proyecto' },
-  { id:'portfolio',  zone:'web',      label:'Mi Portfolio',       icon:'🧑‍💻', color:'#a78bfa', x:2900, y:1900, r:11, url:'https://github.com/bdjoseluis',         info:'Portfolio personal — proyectos, skills y contacto' },
+  { id:'portfolio',  zone:'web',      label:'Mi Portfolio',       icon:'🧑‍💻', color:'#a78bfa', x:2900, y:1900, r:11, url:'https://jose-luis-portfolio.vercel.app', info:'Portfolio personal — proyectos, skills y contacto' },
   { id:'servicios',  zone:'web',      label:'Servicios & Precios',icon:'💼', color:'#ec4899', x:2700, y:1960, r:11, route:'/servicios',                          info:'Automatización para negocios — Planes y precios' },
 
   // ══ Proyectos Personales ══════════════════════════════════════════════════════
@@ -328,6 +329,16 @@ export default function Galaxy() {
   const [showPw,      setShowPw]    = useState(false)
   const [loginErr,    setLoginErr]  = useState('')
   const [loginBusy,   setLoginBusy] = useState(false)
+  // Tab: 'admin' | 'user' | 'register'
+  const [loginTab,    setLoginTab]  = useState('admin')
+  const [regUser,     setRegUser]   = useState('')
+  const [regEmail,    setRegEmail]  = useState('')
+  const [regPw,       setRegPw]     = useState('')
+  const [regReason,   setRegReason] = useState('')
+  const [regDone,     setRegDone]   = useState(false)
+  const [regBusy,     setRegBusy]   = useState(false)
+  const [regErr,      setRegErr]    = useState('')
+  const [userLogin,   setUserLogin] = useState('')
 
   const { token, login } = useAuth()
   const navigate = useNavigate()
@@ -803,20 +814,34 @@ export default function Galaxy() {
   // ── Auth login ────────────────────────────────────────────────────────────
   const doLogin = async (e) => {
     e.preventDefault()
-    if (!pw || loginBusy) return
+    if (loginBusy) return
+    if (loginTab === 'admin' && !pw) return
+    if (loginTab === 'user' && (!userLogin || !pw)) return
     setLoginBusy(true); setLoginErr('')
     try {
-      await login(pw)
-      setShowLogin(false); setPw(''); setLoginErr('')
+      await login(pw, loginTab === 'user' ? userLogin : null)
+      setShowLogin(false); setPw(''); setUserLogin(''); setLoginErr('')
       if (pendingRoute) {
         if (pendingRoute.startsWith('/')) navigate(pendingRoute)
         else window.open(pendingRoute, '_blank', 'noopener,noreferrer')
         setPending(null)
       }
     } catch(err) {
-      setLoginErr(err.response?.data?.detail || 'Contraseña incorrecta')
+      setLoginErr(err.response?.data?.detail || 'Credenciales incorrectos')
       setPw('')
     } finally { setLoginBusy(false) }
+  }
+
+  const doRegister = async (e) => {
+    e.preventDefault()
+    if (!regUser || !regEmail || !regPw || regBusy) return
+    setRegBusy(true); setRegErr('')
+    try {
+      await authApi.register(regUser, regEmail, regPw, regReason)
+      setRegDone(true)
+    } catch(err) {
+      setRegErr(err.response?.data?.detail || 'Error al registrarse')
+    } finally { setRegBusy(false) }
   }
 
   // ── Zoom controls ─────────────────────────────────────────────────────────
@@ -911,12 +936,12 @@ export default function Galaxy() {
         </div>
       )}
 
-      {/* ── AURA brand top-left ───────────────────────────────────────────── */}
+      {/* ── B-DEVOPS brand top-left ──────────────────────────────────────── */}
       <div style={{
         position:'fixed', top:20, left:20, zIndex:20, pointerEvents:'none',
         fontFamily:'Inter, sans-serif',
       }}>
-        <div style={{ color:'rgba(255,255,255,0.85)', fontWeight:900, fontSize:18, letterSpacing:'0.2em', textTransform:'uppercase', textShadow:'0 0 24px rgba(139,92,246,0.7)' }}>DEV<span style={{ color:'#a78bfa' }}>NOVA</span></div>
+        <div style={{ color:'rgba(255,255,255,0.85)', fontWeight:900, fontSize:18, letterSpacing:'0.2em', textTransform:'uppercase', textShadow:'0 0 24px rgba(139,92,246,0.7)' }}>B-<span style={{ color:'#a78bfa' }}>DEVOPS</span></div>
         <div style={{ color:'rgba(255,255,255,0.25)', fontSize:9, letterSpacing:'0.2em', fontFamily:'monospace', marginTop:1 }}>GALAXY MAP · {STARS.length} HERRAMIENTAS</div>
       </div>
 
@@ -986,7 +1011,7 @@ export default function Galaxy() {
           fontFamily:'Inter, sans-serif',
         }}>
           <div style={{
-            width: Math.min(320, window.innerWidth - 28), borderRadius:22, padding:'30px 26px',
+            width: Math.min(340, window.innerWidth - 28), borderRadius:22, padding:'28px 24px',
             animation:'loginIn .3s ease-out',
             background:'linear-gradient(150deg, rgba(79,70,229,0.18) 0%, rgba(4,0,22,0.97) 100%)',
             border:'1px solid rgba(79,70,229,0.4)', backdropFilter:'blur(32px)',
@@ -996,53 +1021,123 @@ export default function Galaxy() {
             {/* Glow orb */}
             <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:120, height:120, borderRadius:'50%', background:'radial-gradient(circle, rgba(124,58,237,0.4) 0%, transparent 70%)', filter:'blur(20px)', pointerEvents:'none' }}/>
 
-            <div style={{ textAlign:'center', marginBottom:24 }}>
-              <div style={{ width:56, height:56, borderRadius:16, background:'rgba(79,70,229,0.25)', border:'1px solid rgba(79,70,229,0.5)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px' }}>
-                <Lock size={22} style={{ color:'#818cf8' }}/>
+            {/* Header */}
+            <div style={{ textAlign:'center', marginBottom:20 }}>
+              <div style={{ width:52, height:52, borderRadius:15, background:'rgba(79,70,229,0.25)', border:'1px solid rgba(79,70,229,0.5)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}>
+                <Lock size={20} style={{ color:'#818cf8' }}/>
               </div>
-              <div style={{ color:'#fff', fontWeight:800, fontSize:20, letterSpacing:'0.05em' }}>DEV<span style={{ color:'#818cf8' }}>NOVA</span></div>
-              <div style={{ color:'rgba(255,255,255,0.35)', fontSize:12, marginTop:4 }}>Acceso privado — by B-DEVOPS</div>
+              <div style={{ color:'#fff', fontWeight:800, fontSize:19, letterSpacing:'0.04em' }}>B-<span style={{ color:'#818cf8' }}>DEVOPS</span></div>
+              <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, marginTop:3 }}>Sistema de Ciberinteligencia OSINT</div>
             </div>
 
-            <form onSubmit={doLogin} style={{ display:'flex', flexDirection:'column', gap:11 }}>
-              <div style={{ position:'relative' }}>
-                <input
-                  type={showPw?'text':'password'}
-                  value={pw}
-                  onChange={e=>{setPw(e.target.value);setLoginErr('')}}
-                  placeholder="Contraseña"
-                  autoFocus
-                  style={{
-                    width:'100%', background:'rgba(255,255,255,0.06)',
-                    border:'1px solid rgba(255,255,255,0.14)', borderRadius:12,
-                    padding:'13px 44px 13px 16px', color:'#fff', fontSize: IS_MOBILE ? 16 : 14,
-                    outline:'none', fontFamily:'inherit', transition:'border-color .2s',
-                  }}
+            {/* Tabs */}
+            <div style={{ display:'flex', borderRadius:10, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', padding:3, marginBottom:18, gap:2 }}>
+              {[['admin','Admin'],['user','Usuario'],['register','Registrarse']].map(([tab,label]) => (
+                <button key={tab} onClick={()=>{ setLoginTab(tab); setLoginErr(''); setRegErr(''); setPw(''); setUserLogin('') }}
+                  style={{ flex:1, padding:'7px 4px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'inherit', transition:'all .2s',
+                    background: loginTab===tab ? 'rgba(79,70,229,0.7)' : 'transparent',
+                    color: loginTab===tab ? '#fff' : 'rgba(255,255,255,0.4)',
+                    boxShadow: loginTab===tab ? '0 0 12px rgba(79,70,229,0.4)' : 'none',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Admin tab */}
+            {loginTab === 'admin' && (
+              <form onSubmit={doLogin} style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <div style={{ position:'relative' }}>
+                  <input type={showPw?'text':'password'} value={pw} onChange={e=>{setPw(e.target.value);setLoginErr('')}}
+                    placeholder="Contraseña de administrador" autoFocus
+                    style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.14)', borderRadius:11, padding:'12px 42px 12px 14px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
+                    onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.75)'}
+                    onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.14)'}
+                  />
+                  <button type="button" onClick={()=>setShowPw(v=>!v)} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'rgba(255,255,255,.35)', cursor:'pointer' }}>
+                    {showPw ? <EyeOff size={14}/> : <Eye size={14}/>}
+                  </button>
+                </div>
+                {loginErr && <div style={{ color:'#f87171', fontSize:12, padding:'7px 11px', background:'rgba(239,68,68,.12)', borderRadius:9, border:'1px solid rgba(239,68,68,.25)' }}>{loginErr}</div>}
+                <button type="submit" disabled={!pw||loginBusy} style={{ padding:'12px', borderRadius:11, border:'none', background:(!pw||loginBusy)?'rgba(79,70,229,0.28)':'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', fontWeight:700, fontSize:13, cursor:(!pw||loginBusy)?'not-allowed':'pointer', fontFamily:'inherit', boxShadow:(!pw||loginBusy)?'none':'0 0 18px rgba(124,58,237,0.4)' }}>
+                  {loginBusy ? 'Verificando...' : 'Entrar como Admin'}
+                </button>
+              </form>
+            )}
+
+            {/* User tab */}
+            {loginTab === 'user' && (
+              <form onSubmit={doLogin} style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <input type="text" value={userLogin} onChange={e=>{setUserLogin(e.target.value);setLoginErr('')}}
+                  placeholder="Usuario o email" autoFocus
+                  style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.14)', borderRadius:11, padding:'12px 14px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
                   onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.75)'}
                   onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.14)'}
                 />
-                <button type="button" onClick={()=>setShowPw(v=>!v)} style={{
-                  position:'absolute', right:13, top:'50%', transform:'translateY(-50%)',
-                  background:'none', border:'none', color:'rgba(255,255,255,.38)', cursor:'pointer',
-                }}>
-                  {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
-                </button>
-              </div>
-              {loginErr && (
-                <div style={{ color:'#f87171', fontSize:12, padding:'8px 12px', background:'rgba(239,68,68,.12)', borderRadius:9, border:'1px solid rgba(239,68,68,.25)' }}>
-                  {loginErr}
+                <div style={{ position:'relative' }}>
+                  <input type={showPw?'text':'password'} value={pw} onChange={e=>{setPw(e.target.value);setLoginErr('')}}
+                    placeholder="Contraseña"
+                    style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.14)', borderRadius:11, padding:'12px 42px 12px 14px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
+                    onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.75)'}
+                    onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.14)'}
+                  />
+                  <button type="button" onClick={()=>setShowPw(v=>!v)} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'rgba(255,255,255,.35)', cursor:'pointer' }}>
+                    {showPw ? <EyeOff size={14}/> : <Eye size={14}/>}
+                  </button>
                 </div>
-              )}
-              <button type="submit" disabled={!pw||loginBusy} style={{
-                padding:'13px', borderRadius:12, border:'none',
-                background:(!pw||loginBusy)?'rgba(79,70,229,0.28)':'linear-gradient(135deg,#4f46e5,#7c3aed)',
-                color:'#fff', fontWeight:700, fontSize:14, letterSpacing:'0.03em',
-                cursor:(!pw||loginBusy)?'not-allowed':'pointer', transition:'all .2s', fontFamily:'inherit',
-                boxShadow:(!pw||loginBusy)?'none':'0 0 20px rgba(124,58,237,0.4)',
-              }}>
-                {loginBusy ? 'Verificando...' : '◀ Entrar al Sistema ▶'}
-              </button>
-            </form>
+                {loginErr && <div style={{ color:'#f87171', fontSize:12, padding:'7px 11px', background:'rgba(239,68,68,.12)', borderRadius:9, border:'1px solid rgba(239,68,68,.25)' }}>{loginErr}</div>}
+                <button type="submit" disabled={!userLogin||!pw||loginBusy} style={{ padding:'12px', borderRadius:11, border:'none', background:(!userLogin||!pw||loginBusy)?'rgba(79,70,229,0.28)':'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', fontWeight:700, fontSize:13, cursor:(!userLogin||!pw||loginBusy)?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                  {loginBusy ? 'Verificando...' : 'Iniciar Sesion'}
+                </button>
+                <p style={{ color:'rgba(255,255,255,0.25)', fontSize:10, textAlign:'center' }}>Las cuentas de usuario requieren aprobacion del administrador</p>
+              </form>
+            )}
+
+            {/* Register tab */}
+            {loginTab === 'register' && (
+              regDone ? (
+                <div style={{ textAlign:'center', padding:'16px 0' }}>
+                  <div style={{ fontSize:32, marginBottom:10 }}>✅</div>
+                  <div style={{ color:'#4ade80', fontWeight:700, fontSize:14, marginBottom:6 }}>Solicitud enviada</div>
+                  <p style={{ color:'rgba(255,255,255,0.4)', fontSize:12, lineHeight:1.5 }}>El administrador revisara tu solicitud y recibiras un email cuando sea aprobada.</p>
+                  <button onClick={()=>{ setLoginTab('user'); setRegDone(false) }} style={{ marginTop:16, padding:'10px 20px', borderRadius:10, border:'1px solid rgba(79,70,229,0.5)', background:'rgba(79,70,229,0.2)', color:'#818cf8', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
+                    Ir a Iniciar Sesion
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={doRegister} style={{ display:'flex', flexDirection:'column', gap:9 }}>
+                  <input type="text" value={regUser} onChange={e=>{setRegUser(e.target.value);setRegErr('')}}
+                    placeholder="Nombre de usuario" autoFocus
+                    style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 13px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
+                    onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.7)'}
+                    onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
+                  />
+                  <input type="email" value={regEmail} onChange={e=>{setRegEmail(e.target.value);setRegErr('')}}
+                    placeholder="Email"
+                    style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 13px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
+                    onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.7)'}
+                    onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
+                  />
+                  <input type="password" value={regPw} onChange={e=>{setRegPw(e.target.value);setRegErr('')}}
+                    placeholder="Contrasena (min. 6 caracteres)"
+                    style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 13px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
+                    onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.7)'}
+                    onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
+                  />
+                  <input type="text" value={regReason} onChange={e=>setRegReason(e.target.value)}
+                    placeholder="Por que quieres acceso? (opcional)"
+                    style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 13px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
+                    onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.7)'}
+                    onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
+                  />
+                  {regErr && <div style={{ color:'#f87171', fontSize:12, padding:'7px 11px', background:'rgba(239,68,68,.12)', borderRadius:9 }}>{regErr}</div>}
+                  <button type="submit" disabled={!regUser||!regEmail||regPw.length<6||regBusy} style={{ padding:'12px', borderRadius:11, border:'none', background:(!regUser||!regEmail||regPw.length<6||regBusy)?'rgba(79,70,229,0.28)':'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                    {regBusy ? 'Enviando...' : 'Solicitar Acceso'}
+                  </button>
+                  <p style={{ color:'rgba(255,255,255,0.22)', fontSize:10, textAlign:'center' }}>Tu cuenta sera activada tras revision del administrador</p>
+                </form>
+              )
+            )}
           </div>
         </div>
       )}

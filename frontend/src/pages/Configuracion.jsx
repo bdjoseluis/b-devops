@@ -1,9 +1,10 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { settings, auth } from '../api/client'
 import Spinner from '../components/Spinner'
 import {
   Settings, Key, User, Server, Save, CheckCircle,
-  XCircle, Eye, EyeOff, TestTube, AlertTriangle, Terminal, Mail, Webhook, Copy, Lock, Unlock, ShieldCheck
+  XCircle, Eye, EyeOff, TestTube, AlertTriangle, Terminal, Mail, Webhook, Copy, Lock, Unlock, ShieldCheck,
+  UserCheck, UserX, Trash2, RefreshCw, Users
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -511,7 +512,7 @@ export default function Configuracion() {
         <div className="flex items-center gap-2 mb-4">
           <Lock size={16} className="text-gray-400" />
           <span className="text-gray-300 font-semibold">Contraseña de acceso</span>
-          <span className="text-gray-500 text-xs">— protege el acceso a DEVNOVA</span>
+          <span className="text-gray-500 text-xs">— protege el acceso a B-DEVOPS</span>
         </div>
         <div className="flex gap-3">
           <input
@@ -535,11 +536,14 @@ export default function Configuracion() {
             {pwSaved ? <><CheckCircle size={14} /> Guardada</> : <><Save size={14} /> Cambiar</>}
           </button>
         </div>
-        <p className="text-gray-600 text-xs mt-2">Contraseña actual almacenada en config.json</p>
+        <p className="text-gray-600 text-xs mt-2">Contraseña actual almacenada en config.json (por defecto: <code className="text-gray-400">REDACTED</code>)</p>
       </div>
 
       {/* Change Admin PIN */}
       {adminUnlocked && <AdminPinChanger auth={auth} />}
+
+      {/* User Management */}
+      {adminUnlocked && <UserManager />}
 
       {/* Legal notice */}
       <div className="p-4 rounded-lg bg-red-900/10 border border-red-700/30 flex gap-3">
@@ -597,6 +601,154 @@ function AdminPinChanger({ auth }) {
         </button>
       </form>
       {msg && <p className={`text-xs mt-2 ${msg.ok ? 'text-green-400' : 'text-red-400'}`}>{msg.text}</p>}
+    </div>
+  )
+}
+
+// ── User Management ─────────────────────────────────────────────────────────────
+const STATUS_STYLE = {
+  pending:  { label: 'Pendiente', cls: 'text-yellow-300 bg-yellow-900/30 border-yellow-700/30' },
+  approved: { label: 'Aprobado',  cls: 'text-green-300 bg-green-900/30 border-green-700/30' },
+  rejected: { label: 'Rechazado', cls: 'text-red-300 bg-red-900/30 border-red-700/30' },
+}
+
+function UserManager() {
+  const [users,   setUsers]   = useState([])
+  const [loading, setLoading] = useState(false)
+  const [busy,    setBusy]    = useState({})
+  const [msg,     setMsg]     = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await auth.listUsers()
+      setUsers(data.users || [])
+    } catch (e) {
+      setMsg({ ok: false, text: 'No se pudo cargar: ' + (e.response?.data?.detail || e.message) })
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const act = async (userId, action) => {
+    setBusy(b => ({ ...b, [userId]: true }))
+    try {
+      if (action === 'approve') await auth.approveUser(userId)
+      else if (action === 'reject') await auth.rejectUser(userId)
+      else if (action === 'delete') await auth.deleteUser(userId)
+      await load()
+      setMsg({ ok: true, text: action === 'approve' ? 'Usuario aprobado' : action === 'reject' ? 'Usuario rechazado' : 'Usuario eliminado' })
+      setTimeout(() => setMsg(null), 3000)
+    } catch (e) {
+      setMsg({ ok: false, text: e.response?.data?.detail || 'Error al realizar acción' })
+    } finally { setBusy(b => ({ ...b, [userId]: false })) }
+  }
+
+  const pending  = users.filter(u => u.status === 'pending')
+  const approved = users.filter(u => u.status === 'approved')
+  const rejected = users.filter(u => u.status === 'rejected')
+
+  return (
+    <div className="card border-purple-700/30">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Users size={16} className="text-purple-400" />
+          <span className="text-purple-300 font-semibold">Gestión de Usuarios</span>
+          <span className="text-gray-500 text-xs">— registro y aprobación de accesos</span>
+        </div>
+        <button onClick={load} disabled={loading} className="p-1.5 rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">
+          {loading ? <Spinner size={13} /> : <RefreshCw size={13} />}
+        </button>
+      </div>
+
+      {msg && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 text-xs ${msg.ok ? 'bg-green-900/20 border border-green-700/30 text-green-300' : 'bg-red-900/20 border border-red-700/30 text-red-300'}`}>
+          {msg.ok ? <CheckCircle size={13}/> : <AlertTriangle size={13}/>} {msg.text}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {[
+          { label: 'Pendientes', count: pending.length,  color: 'text-yellow-400', border: 'border-yellow-700/30', bg: 'bg-yellow-900/10' },
+          { label: 'Aprobados',  count: approved.length, color: 'text-green-400',  border: 'border-green-700/30',  bg: 'bg-green-900/10' },
+          { label: 'Rechazados', count: rejected.length, color: 'text-red-400',    border: 'border-red-700/30',    bg: 'bg-red-900/10' },
+        ].map(s => (
+          <div key={s.label} className={`rounded-lg border ${s.border} ${s.bg} px-3 py-2 text-center`}>
+            <div className={`font-bold text-lg ${s.color}`}>{s.count}</div>
+            <div className="text-gray-500 text-xs">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {users.length === 0 && !loading && (
+        <p className="text-gray-600 text-sm text-center py-6">No hay usuarios registrados aún</p>
+      )}
+
+      {users.length > 0 && (
+        <div className="space-y-2">
+          {users.map(u => {
+            const st = STATUS_STYLE[u.status] || STATUS_STYLE.pending
+            const isBusy = busy[u.id]
+            return (
+              <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-dark-100 border border-surface-border/40">
+                <div className="w-8 h-8 rounded-full bg-purple-900/40 border border-purple-700/30 flex items-center justify-center shrink-0">
+                  <User size={14} className="text-purple-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-white text-sm font-medium">{u.username}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded border ${st.cls}`}>{st.label}</span>
+                    <span className="text-gray-600 text-xs">{u.role}</span>
+                  </div>
+                  <div className="text-gray-500 text-xs truncate">{u.email}</div>
+                  <div className="text-gray-600 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString('es-ES') : ''}</div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {u.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => act(u.id, 'approve')} disabled={isBusy}
+                        title="Aprobar"
+                        className="p-1.5 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 hover:bg-green-900/40 transition-colors disabled:opacity-50"
+                      >
+                        {isBusy ? <Spinner size={12} /> : <UserCheck size={12} />}
+                      </button>
+                      <button
+                        onClick={() => act(u.id, 'reject')} disabled={isBusy}
+                        title="Rechazar"
+                        className="p-1.5 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 hover:bg-red-900/40 transition-colors disabled:opacity-50"
+                      >
+                        {isBusy ? <Spinner size={12} /> : <UserX size={12} />}
+                      </button>
+                    </>
+                  )}
+                  {u.status === 'rejected' && (
+                    <button
+                      onClick={() => act(u.id, 'approve')} disabled={isBusy}
+                      title="Aprobar igualmente"
+                      className="p-1.5 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 hover:bg-green-900/40 transition-colors disabled:opacity-50"
+                    >
+                      {isBusy ? <Spinner size={12} /> : <UserCheck size={12} />}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { if (window.confirm(`Eliminar usuario "${u.username}"?`)) act(u.id, 'delete') }} disabled={isBusy}
+                    title="Eliminar"
+                    className="p-1.5 rounded-lg bg-gray-900/40 border border-gray-700/30 text-gray-500 hover:text-red-400 hover:border-red-700/30 transition-colors disabled:opacity-50"
+                  >
+                    {isBusy ? <Spinner size={12} /> : <Trash2 size={12} />}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <p className="text-gray-700 text-xs mt-3">
+        Los usuarios se registran desde la pantalla de inicio. Los pendientes reciben email al ser aprobados (si SMTP está configurado).
+      </p>
     </div>
   )
 }

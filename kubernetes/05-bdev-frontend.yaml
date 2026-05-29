@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aura-frontend
-  namespace: aura-ops
+  name: bdev-frontend
+  namespace: bdev-ops
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: aura-frontend
+      app: bdev-frontend
   template:
     metadata:
       labels:
-        app: aura-frontend
+        app: bdev-frontend
     spec:
       containers:
-        - name: aura-frontend
-          image: aura-frontend:local
+        - name: bdev-frontend
+          image: bdev-frontend:local
           ports:
             - containerPort: 80
           resources:
@@ -35,11 +35,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: aura-frontend
-  namespace: aura-ops
+  name: bdev-frontend
+  namespace: bdev-ops
 spec:
   selector:
-    app: aura-frontend
+    app: bdev-frontend
   ports:
     - port: 80
       targetPort: 80

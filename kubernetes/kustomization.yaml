@@ -1,15 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: aura-ops
+namespace: bdev-ops
 
 resources:
   - 00-namespace.yaml
   - 01-postgres.yaml
   - 02-clickhouse.yaml
   - 03-n8n.yaml
-  - 04-aura-backend.yaml
-  - 05-aura-frontend.yaml
+  - 04-bdev-backend.yaml
+  - 05-bdev-frontend.yaml
   - 06-ingress.yaml
   - 07-cert-manager.yaml
 

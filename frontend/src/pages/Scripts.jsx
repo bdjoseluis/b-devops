@@ -219,7 +219,7 @@ jobs:
             git pull origin main
             source venv/bin/activate
             pip install -r backend/requirements.txt
-            systemctl restart aura-backend
+            systemctl restart bdev-backend
             cd frontend && npm ci && npm run build
             systemctl restart nginx`
   },
@@ -242,7 +242,7 @@ git pull origin main
 # Backend FastAPI
 source venv/bin/activate
 pip install -r backend/requirements.txt -q
-systemctl restart aura-backend
+systemctl restart bdev-backend
 echo "✅ Backend reiniciado"
 
 # Frontend React
@@ -269,11 +269,11 @@ echo "🌐 App disponible en https://$DOMAIN"
     id: 'systemd-service', title: 'FastAPI como servicio systemd', category: 'deploy', type: 'config', lang: 'ini',
     tags: ['systemd', 'FastAPI', 'daemon', 'VPS'],
     description: 'Configura el backend FastAPI como daemon del sistema. Arranca automáticamente.',
-    content: `# /etc/systemd/system/aura-backend.service
+    content: `# /etc/systemd/system/bdev-backend.service
 # Instalar:
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable aura-backend
-#   sudo systemctl start aura-backend
+#   sudo systemctl enable bdev-backend
+#   sudo systemctl start bdev-backend
 
 [Unit]
 Description=B-DEVOPS — FastAPI Backend
@@ -290,7 +290,7 @@ Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=aura-backend
+SyslogIdentifier=bdev-backend
 
 [Install]
 WantedBy=multi-user.target`

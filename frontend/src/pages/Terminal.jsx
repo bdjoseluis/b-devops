@@ -3,7 +3,7 @@ import { ai, scan } from '../api/client'
 import Spinner from '../components/Spinner'
 import { Send, Trash2, Terminal as TerminalIcon, Zap, Copy } from 'lucide-react'
 
-const SESSION_ID = 'aura-terminal'
+const SESSION_ID = 'bdev-terminal'
 
 const QUICK_CMDS = [
   { label: 'Analizar dominio', prompt: 'Analiza la seguridad de este dominio y dame los pasos a seguir: ' },

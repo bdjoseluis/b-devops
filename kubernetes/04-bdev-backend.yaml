@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aura-backend
-  namespace: aura-ops
+  name: bdev-backend
+  namespace: bdev-ops
   labels:
-    app: aura-backend
+    app: bdev-backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: aura-backend
+      app: bdev-backend
   template:
     metadata:
       labels:
-        app: aura-backend
+        app: bdev-backend
     spec:
       containers:
-        - name: aura-backend
-          image: aura-backend:local
+        - name: bdev-backend
+          image: bdev-backend:local
           ports:
             - containerPort: 8000
           env:
             - name: DATABASE_URL
-              value: postgresql://aura:CHANGE_ME_STRONG_PASSWORD@postgres:5432/aura_ops
+              value: postgresql://bdev:CHANGE_ME_STRONG_PASSWORD@postgres:5432/bdev_ops
             - name: CLICKHOUSE_HOST
               value: clickhouse
             - name: CLICKHOUSE_PORT
@@ -55,15 +55,15 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: aura-config
+            name: bdev-config
         - name: reports
           emptyDir: {}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aura-config
-  namespace: aura-ops
+  name: bdev-config
+  namespace: bdev-ops
 data:
   config.json: |
     {
@@ -75,11 +75,11 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: aura-backend
-  namespace: aura-ops
+  name: bdev-backend
+  namespace: bdev-ops
 spec:
   selector:
-    app: aura-backend
+    app: bdev-backend
   ports:
     - port: 8000
       targetPort: 8000

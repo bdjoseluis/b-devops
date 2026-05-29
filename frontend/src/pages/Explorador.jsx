@@ -41,7 +41,7 @@ const INITIAL_TREE = [
   },
   {
     id: 'f4', name: 'Notas personales', type: 'folder', children: [
-      { id: 'd10', name: 'Ideas y roadmap', type: 'document', content: '# Ideas y Roadmap\n\n## B-DEVOPS — Próximas features\n- [ ] n8n integration — webhook al acabar auditoría\n- [ ] Email automation — SMTP Gmail\n- [ ] Prospector province scanner UI\n- [ ] WhatsApp via Twilio\n- [ ] Login con JWT\n- [ ] Base de datos PostgreSQL\n- [ ] Deploy en VPS con Docker\n\n## Ideas de nuevos proyectos\n- Herramienta de análisis de contratos (IA)\n- Bot de Telegram para alertas OSINT\n- Chrome extension para reconocimiento pasivo\n\n## Objetivos 2026\n- [ ] Certificación OSCP\n- [ ] Publicar 3 artículos técnicos\n- [ ] 1 cliente de auditoría mensual\n- [ ] Deploy público de B-DEVOPS' },
+      { id: 'd10', name: 'Ideas y roadmap', type: 'document', content: '# Ideas y Roadmap\n\n## B-DEVOPS v2.0 — Completado ✅\n- [x] n8n + Notion CRM — webhook registro/aprobación usuarios\n- [x] Email automation — SMTP Gmail\n- [x] Login con JWT — multi-usuario + admin\n- [x] Base de datos PostgreSQL — users + analytics\n- [x] Deploy Docker + Cloudflare Tunnel\n- [x] ClickHouse analytics\n- [x] Grafana dashboards\n- [x] WireGuard VPN\n- [x] Groq AI Chat (Llama 3.3 70B)\n\n## Próximas features\n- [ ] WhatsApp via Twilio / n8n\n- [ ] Bot de Telegram para alertas OSINT\n- [ ] Mobile PWA\n- [ ] Kubernetes deploy en Hetzner\n- [ ] Chrome extension para reconocimiento pasivo\n\n## Objetivos 2026\n- [ ] Certificación OSCP\n- [ ] Publicar 3 artículos técnicos\n- [ ] 3 clientes de auditoría activos\n- [ ] API pública B-DEVOPS' },
     ]
   },
 ]

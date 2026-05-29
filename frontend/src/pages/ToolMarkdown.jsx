@@ -83,11 +83,11 @@ function mdToHtml(md) {
   return result.join('\n')
 }
 
-const SAMPLE = `# DEVNOVA Platform 🚀
+const SAMPLE = `# B-DEVOPS Platform
 
-## Descripción
+## Descripcion
 
-**DEVNOVA** es una plataforma de operaciones _all-in-one_ para equipos de seguridad y desarrollo.
+**B-DEVOPS** es una plataforma de operaciones _all-in-one_ para equipos de seguridad y desarrollo.
 
 ## Características principales
 

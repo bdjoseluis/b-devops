@@ -269,7 +269,7 @@ function ServiciosTab() {
       icon: Zap,
       color: 'text-orange-400',
       desc: 'Automatización de flujos — webhooks, alertas, pipelines',
-      localUrl: 'http://localhost:5678',
+      localUrl: 'https://crm.bdev.qzz.io',
       docs: 'https://docs.n8n.io',
       port: '5678',
     },

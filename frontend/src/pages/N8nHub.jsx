@@ -5,7 +5,7 @@ import {
   Settings, Activity, Globe, Database, Mail, Shield, Link
 } from 'lucide-react'
 
-const N8N_BASE = 'http://localhost:5678'
+const N8N_BASE = 'https://crm.bdev.qzz.io'
 
 // ─── Preset workflow trigger templates ────────────────────────────────────────
 const PRESET_WORKFLOWS = [
@@ -251,15 +251,15 @@ export default function N8nHub() {
           <div className="bg-dark-200 border border-surface-border rounded-xl p-5 space-y-4">
             <h2 className="text-white font-semibold">Integración B-DEVOPS ↔ n8n</h2>
             <p className="text-gray-400 text-sm leading-relaxed">
-              n8n corre en <code className="bg-dark-300 text-orange-300 px-1.5 py-0.5 rounded text-xs">http://localhost:5678</code> y puede recibir webhooks desde B-DEVOPS.
-              Crea workflows en n8n que se activen via HTTP Request y úsalos para automatizar reportes, alertas, y análisis.
+              n8n esta disponible en <code className="bg-dark-300 text-orange-300 px-1.5 py-0.5 rounded text-xs">crm.bdev.qzz.io</code> via Cloudflare Tunnel.
+              Crea workflows en n8n que se activen via HTTP Request y usaLos para automatizar reportes, alertas, y analisis.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { title: 'Credential', value: 'admin / admin', icon: Shield, note: 'Login por defecto' },
+                { title: 'Acceso publico', value: 'crm.bdev.qzz.io', icon: Shield, note: 'Via Cloudflare Tunnel' },
                 { title: 'API URL',    value: `${N8N_BASE}/api/v1`, icon: Link, note: 'REST API endpoint' },
                 { title: 'Webhooks',  value: `${N8N_BASE}/webhook/`, icon: Zap, note: 'Base webhook URL' },
-                { title: 'Container', value: 'aura-n8n:5678', icon: Database, note: 'Docker container name' },
+                { title: 'Container', value: 'bdev-n8n:5678', icon: Database, note: 'Docker container name' },
               ].map(item => (
                 <div key={item.title} className="bg-dark-300 rounded-xl p-4 flex items-center gap-3">
                   <item.icon size={16} className="text-orange-400 shrink-0" />

@@ -15,8 +15,8 @@ const EXTERNAL_SERVICES = [
   {
     id: 'n8n',
     name: 'n8n Workflows',
-    url: 'http://localhost:5678',
-    desc: 'Automatización de flujos de trabajo',
+    url: 'https://crm.bdev.qzz.io',
+    desc: 'Automatizacion de flujos de trabajo — CRM',
     icon: GitBranch,
     color: 'text-orange-400',
     bg: 'bg-orange-900/20 border-orange-700/30',
@@ -303,8 +303,8 @@ export default function Infra() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 text-xs">
-                <AlertTriangle size={11} className="text-yellow-400 shrink-0" />
-                <span className="text-yellow-300/80">DNS CNAME pendiente — abre Cloudflare DNS y añade el registro</span>
+                <CheckCircle size={11} className="text-green-400 shrink-0" />
+                <span className="text-green-300/80">DNS configurado — app.bdev.qzz.io y api.bdev.qzz.io activos</span>
               </div>
             </div>
 
@@ -346,21 +346,22 @@ export default function Infra() {
             </div>
           </div>
 
-          {/* DNS setup instructions */}
+          {/* DNS routing table */}
           <div className="mt-4 pt-4 border-t border-gray-800">
-            <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Configuración DNS pendiente</p>
-            <div className="bg-gray-900/60 rounded-lg p-3 font-mono text-xs">
-              <p className="text-gray-500 mb-2"># Añade este registro CNAME en Cloudflare DNS → bdev.qzz.io:</p>
-              <div className="grid grid-cols-4 gap-2 text-gray-300">
-                <span className="text-gray-500">Tipo</span>
-                <span className="text-gray-500">Nombre</span>
-                <span className="text-gray-500">Contenido</span>
-                <span className="text-gray-500">Proxy</span>
-                <span className="text-yellow-400">CNAME</span>
-                <span className="text-white">@</span>
-                <span className="text-green-400 truncate">{TUNNEL_ID}.cfargotunnel.com</span>
-                <span className="text-orange-400">ON ☁️</span>
-              </div>
+            <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Subdominios activos</p>
+            <div className="bg-gray-900/60 rounded-lg p-3 font-mono text-xs space-y-1.5">
+              {[
+                { sub: 'app.bdev.qzz.io',   local: 'localhost:3000', note: 'Frontend' },
+                { sub: 'api.bdev.qzz.io',   local: 'localhost:8000', note: 'Backend FastAPI' },
+                { sub: 'crm.bdev.qzz.io',   local: 'localhost:5678', note: 'n8n CRM' },
+                { sub: 'bdev.qzz.io',       local: 'localhost:3000', note: 'Root (redirect)' },
+              ].map(r => (
+                <div key={r.sub} className="grid grid-cols-3 gap-2 text-gray-300">
+                  <span className="text-blue-400">{r.sub}</span>
+                  <span className="text-green-400">→ {r.local}</span>
+                  <span className="text-gray-600">{r.note}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

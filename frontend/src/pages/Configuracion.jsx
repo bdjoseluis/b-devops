@@ -78,7 +78,7 @@ export default function Configuracion() {
   const [newPassword,   setNewPassword]     = useState('')
   const [pwSaved,       setPwSaved]         = useState(false)
   // Admin PIN gate for API keys
-  const [adminUnlocked, setAdminUnlocked]   = useState(() => sessionStorage.getItem('devnova_admin') === 'yes')
+  const [adminUnlocked, setAdminUnlocked]   = useState(() => sessionStorage.getItem('bdevops_admin') === 'yes')
   const [adminPin,      setAdminPin]        = useState('')
   const [pinError,      setPinError]        = useState('')
   const [pinLoading,    setPinLoading]      = useState(false)
@@ -156,7 +156,7 @@ export default function Configuracion() {
     setPinLoading(true); setPinError('')
     try {
       await auth.verifyAdmin(adminPin.trim())
-      sessionStorage.setItem('devnova_admin', 'yes')
+      sessionStorage.setItem('bdevops_admin', 'yes')
       setAdminUnlocked(true); setAdminPin('')
     } catch (err) {
       setPinError(err.response?.data?.detail || 'PIN incorrecto')
@@ -164,7 +164,7 @@ export default function Configuracion() {
   }
 
   const lockAdmin = () => {
-    sessionStorage.removeItem('devnova_admin')
+    sessionStorage.removeItem('bdevops_admin')
     setAdminUnlocked(false)
     setAdminPin('')
   }

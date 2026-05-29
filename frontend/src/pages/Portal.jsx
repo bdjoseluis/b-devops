@@ -436,10 +436,10 @@ export default function Portal() {
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: 'n8n Workflows',  url: 'http://localhost:5678',      icon: GitBranch, color: '#f97316' },
-                  { label: 'ClickHouse Play',url: 'http://localhost:8123/play', icon: BarChart2, color: '#f59e0b' },
-                  { label: 'API Swagger',    url: 'http://localhost:8000/docs', icon: Code2,     color: '#06b6d4' },
-                  { label: 'bdev.qzz.io',   url: 'https://bdev.qzz.io',       icon: Globe,     color: '#10b981' },
+                  { label: 'n8n / CRM',      url: 'https://crm.bdev.qzz.io',       icon: GitBranch, color: '#f97316' },
+                  { label: 'ClickHouse Play',url: 'http://localhost:8123/play',   icon: BarChart2, color: '#f59e0b' },
+                  { label: 'API Swagger',    url: 'https://api.bdev.qzz.io/docs', icon: Code2,     color: '#06b6d4' },
+                  { label: 'bdev.qzz.io',   url: 'https://app.bdev.qzz.io',      icon: Globe,     color: '#10b981' },
                 ].map((item, i) => (
                   <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]"

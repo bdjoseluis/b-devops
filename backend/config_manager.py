@@ -45,6 +45,18 @@ DEFAULT_CONFIG = {
     "scan_defaults": {
         "timeout": 30,
         "max_subdomains": 200
+    },
+    "auth": {
+        "password": "REDACTED",
+        "admin_pin": "REDACTED"
+    },
+    "smtp": {
+        "enabled": False,
+        "email": "",
+        "password": "",
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "to": ""
     }
 }
 

@@ -354,14 +354,12 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
-      # Datasource Prometheus pre-configurado
-      - GF_DATASOURCES_DEFAULT_NAME=Prometheus
-      - GF_DATASOURCES_DEFAULT_TYPE=prometheus
-      - GF_DATASOURCES_DEFAULT_URL=http://bdev-prometheus:9090
-      - GF_DATASOURCES_DEFAULT_ACCESS=proxy
-      - GF_DATASOURCES_DEFAULT_ISDEFAULT=true
+      # Datasource y dashboards configurados via provisioning (infra/grafana/provisioning/)
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/bdev-overview.json
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - bdev-prometheus
     networks:

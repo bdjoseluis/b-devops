@@ -149,6 +149,7 @@ services:
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
       - SECRET_KEY=${SECRET_KEY:-changeme_backend_secret}
+      - N8N_URL=http://bdev-n8n:5678
     volumes:
       - ./backend/config.json:/app/config.json
       - ./backend/reports:/app/reports

@@ -13,7 +13,9 @@ import base64
 import json
 import uuid
 import smtplib
+import asyncio
 import asyncpg
+import aiohttp
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, HTTPException, Depends
@@ -122,6 +124,20 @@ def _send_email(to: str, subject: str, html: str):
         print(f"[auth] Email send error: {e}")
 
 
+# ── n8n webhook helper ────────────────────────────────────────────────────────
+N8N_BASE = os.environ.get("N8N_URL", "http://bdev-n8n:5678")
+
+async def _fire_n8n(path: str, payload: dict):
+    """Fire-and-forget async webhook to n8n. Never raises — logs error silently."""
+    try:
+        url = f"{N8N_BASE}{path}"
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as r:
+                print(f"[auth] n8n webhook {path} -> {r.status}")
+    except Exception as e:
+        print(f"[auth] n8n webhook failed ({path}): {e}")
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/login")
@@ -204,6 +220,17 @@ async def register(body: dict):
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error DB: {e}")
 
+    # n8n webhook — notifica al CRM (fire and forget)
+    asyncio.create_task(_fire_n8n("/webhook/user-register", {
+        "event": "user_register",
+        "user_id": uid,
+        "username": username,
+        "email": email,
+        "reason": reason or "",
+        "status": "pending",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }))
+
     # Email al admin
     cfg       = load_config()
     admin_to  = cfg.get("smtp", {}).get("to", "")
@@ -252,6 +279,15 @@ async def approve_user(user_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error DB: {e}")
+
+    # n8n webhook — notifica aprobación al CRM
+    asyncio.create_task(_fire_n8n("/webhook/user-approved", {
+        "event": "user_approved",
+        "user_id": user_id,
+        "username": user["username"],
+        "email": user["email"],
+        "approved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }))
 
     # Email al usuario
     _send_email(

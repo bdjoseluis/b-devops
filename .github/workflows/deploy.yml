@@ -1,73 +1,77 @@
-﻿name: 🚀 Deploy B-DEVOPS
+name: Deploy B-DEVOPS
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:        # permite lanzar manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   deploy:
     name: Build & Deploy
-    runs-on: self-hosted     # runner local en tu máquina Windows
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: D:\aura-ops
         shell: powershell
 
     steps:
-      # ── 1. Pull latest code ────────────────────────────────────────────────
-      - name: 📥 Pull latest code
+      - name: Pull latest code
         run: |
           git pull origin main
-          Write-Host "✅ Código actualizado: $(git log -1 --format='%h %s')"
+          $commit = git log -1 --format='%h %s'
+          Write-Host "Codigo actualizado: $commit"
 
-      # ── 2. Smart rebuild — solo los servicios que cambiaron ────────────────
-      - name: 🐳 Rebuild changed services
+      - name: Rebuild changed services
         run: |
+          $ErrorActionPreference = 'Continue'
           $changed = git diff --name-only HEAD~1 HEAD 2>$null
-          if (-not $changed) { $changed = git diff --name-only HEAD }
-          Write-Host "📝 Archivos modificados:`n$($changed -join "`n")"
+          if (-not $changed) {
+            $changed = git diff --name-only HEAD 2>$null
+          }
+          if (-not $changed) {
+            Write-Host "Sin cambios detectados"
+            exit 0
+          }
+          Write-Host "Archivos modificados: $($changed.Count)"
 
-          $rebuildBackend  = $changed | Where-Object { $_ -like "backend/*" }
-          $rebuildFrontend = $changed | Where-Object { $_ -like "frontend/*" }
-          $rebuildCompose  = $changed | Where-Object { $_ -eq "docker-compose.yml" }
-
+          $rebuildBackend  = @($changed | Where-Object { $_ -like "backend/*" })
+          $rebuildFrontend = @($changed | Where-Object { $_ -like "frontend/*" })
+          $rebuildCompose  = @($changed | Where-Object { $_ -eq "docker-compose.yml" })
           $rebuilt = $false
 
-          if ($rebuildCompose) {
-            Write-Host "🔄 docker-compose.yml cambiado — reconstruyendo todo el stack..."
+          if ($rebuildCompose.Count -gt 0) {
+            Write-Host "docker-compose.yml cambiado - reconstruyendo todo el stack..."
             docker compose up -d --build
             $rebuilt = $true
-          } else {
-            if ($rebuildBackend) {
-              Write-Host "🔄 Reconstruyendo backend (FastAPI)..."
+          }
+          else {
+            if ($rebuildBackend.Count -gt 0) {
+              Write-Host "Reconstruyendo backend (FastAPI)..."
               docker compose up -d --build bdev-backend
               $rebuilt = $true
             }
-            if ($rebuildFrontend) {
-              Write-Host "🔄 Reconstruyendo frontend (React)..."
+            if ($rebuildFrontend.Count -gt 0) {
+              Write-Host "Reconstruyendo frontend (React)..."
               docker compose up -d --build bdev-frontend
               $rebuilt = $true
             }
           }
 
           if (-not $rebuilt) {
-            Write-Host "ℹ️  Sin cambios en servicios Docker — nada que reconstruir"
+            Write-Host "Sin cambios en servicios Docker"
           }
 
-      # ── 3. Health check ────────────────────────────────────────────────────
-      - name: ✅ Verificar despliegue
+      - name: Verify deployment
         run: |
-          Write-Host "⏳ Esperando 20s para que los contenedores arranquen..."
           Start-Sleep -Seconds 20
           try {
             $r = Invoke-RestMethod -Uri "https://api.bdev.qzz.io/api/health" -TimeoutSec 10
-            Write-Host "✅ API OK — status: $($r.status)  version: $($r.version)"
-          } catch {
-            Write-Host "⚠️  Health check warning (el servicio puede estar arrancando): $_"
+            Write-Host "API OK - status: $($r.status) version: $($r.version)"
+          }
+          catch {
+            Write-Host "Health check warning: $_"
           }
 
-      # ── 4. Show running containers ─────────────────────────────────────────
-      - name: 📊 Estado del stack
+      - name: Stack status
         if: always()
-        run: docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+        run: docker compose ps

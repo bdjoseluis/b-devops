@@ -65,7 +65,7 @@ const PRIORITY_CLS = { 'Crítico':'bg-red-900/30 text-red-400 border-red-500/30'
 const STATUS_ICON = { 'Activo': <CheckCircle size={14} className="text-green-400" />, 'Degradado': <AlertTriangle size={14} className="text-yellow-400" />, 'Inactivo': <XCircle size={14} className="text-red-400" />, 'Mantenimiento': <Clock size={14} className="text-blue-400" /> }
 const TEST_RESULT_CLS = { 'Exitoso':'bg-green-900/30 text-green-400 border-green-500/30', 'Parcial':'bg-yellow-900/30 text-yellow-400 border-yellow-500/30', 'Fallido':'bg-red-900/30 text-red-400 border-red-500/30' }
 
-const SK_BCP = 'aura_bcp_procedures'
+const SK_BCP = 'bdev_bcp_procedures'
 function loadProcedures() {
   try { const s = localStorage.getItem(SK_BCP); return s ? JSON.parse(s) : SEED_PROCEDURES }
   catch { return SEED_PROCEDURES }

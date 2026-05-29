@@ -143,7 +143,7 @@ services:
     container_name: bdev-backend
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-bdev}:${POSTGRES_PASSWORD:-bdev}@bdev-postgres:5432/${POSTGRES_DB:-bdev_ops}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bdev}:${POSTGRES_PASSWORD:-REDACTED}@bdev-postgres:5432/${POSTGRES_DB:-bdev_ops}
       - CLICKHOUSE_HOST=bdev-clickhouse
       - CLICKHOUSE_PORT=8123
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
@@ -185,7 +185,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-bdev}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bdev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-REDACTED}
       POSTGRES_DB: ${POSTGRES_DB:-bdev_ops}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -242,7 +242,7 @@ services:
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-REDACTED}
       # N8N_ENCRYPTION_KEY: gestionado desde el archivo /home/node/.n8n/config del volumen
       # No pasar aquí para evitar conflictos de comparación con el archivo de configuración
       # URL pública para generación de webhooks (Notion, Zapier, etc.)
@@ -256,7 +256,7 @@ services:
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-bdev_ops}
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-bdev}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-bdev}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-REDACTED}
       - DB_POSTGRESDB_SCHEMA=n8n
     volumes:
       - n8n_data:/home/node/.n8n

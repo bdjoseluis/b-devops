@@ -206,7 +206,7 @@ export default function N8nHub() {
           <XCircle size={18} className="text-red-400 shrink-0" />
           <div>
             <div className="text-red-300 font-semibold text-sm">n8n no disponible</div>
-            <div className="text-red-400/70 text-xs mt-0.5">Comprueba que el contenedor aura-n8n esté corriendo en el puerto 5678. Los triggers de webhook no funcionarán.</div>
+            <div className="text-red-400/70 text-xs mt-0.5">Comprueba que el contenedor bdev-n8n esté corriendo en el puerto 5678. Los triggers de webhook no funcionarán.</div>
           </div>
         </div>
       )}

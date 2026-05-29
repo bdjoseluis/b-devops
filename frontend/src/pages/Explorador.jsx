@@ -112,7 +112,7 @@ function TreeNode({ node, expanded, onToggle, selectedId, onSelect, depth = 0 })
   )
 }
 
-const STORAGE_KEY = 'aura_explorador_tree'
+const STORAGE_KEY = 'bdev_explorador_tree'
 
 function loadTree() {
   try {

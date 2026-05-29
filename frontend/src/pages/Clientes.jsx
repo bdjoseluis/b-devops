@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-const SK = 'aura_clientes'
+const SK = 'bdev_clientes'
 
 const ESTADOS = ['Prospecto', 'Contactado', 'Propuesta', 'Activo', 'Pausado', 'Cerrado']
 const SECTORES = ['Tecnología', 'Salud', 'Retail', 'Finanzas', 'Educación', 'Legal', 'Consultoría', 'Media', 'Industria', 'Otro']

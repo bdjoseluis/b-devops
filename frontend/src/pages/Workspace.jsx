@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
-const SK = 'aura_workspace_v2'
+const SK = 'bdev_workspace_v2'
 function load() { try { return JSON.parse(localStorage.getItem(SK)) || [] } catch { return [] } }
 function save(cases) { try { localStorage.setItem(SK, JSON.stringify(cases)) } catch {} }
 

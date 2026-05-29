@@ -6,8 +6,8 @@ import {
 } from 'lucide-react'
 import { monitor } from '../api/client'
 
-const SK = 'aura_monitor_sites'
-const SK_HISTORY = 'aura_monitor_history'
+const SK = 'bdev_monitor_sites'
+const SK_HISTORY = 'bdev_monitor_history'
 const REFRESH_INTERVALS = [0, 30, 60, 120, 300]
 
 function load(key, fallback) {

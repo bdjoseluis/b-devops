@@ -1,6 +1,6 @@
 ﻿import { useState, useRef, useEffect } from 'react'
 
-const STORAGE_KEY = 'aura_proyectos'
+const STORAGE_KEY = 'bdev_proyectos'
 import { Github, Globe, ExternalLink, Plus, Pencil, Trash2, BookOpen, X, Save } from 'lucide-react'
 
 const STATUS_OPTIONS = [

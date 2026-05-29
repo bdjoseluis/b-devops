@@ -1087,9 +1087,9 @@ export default function Galaxy() {
                 </div>
                 {loginErr && <div style={{ color:'#f87171', fontSize:12, padding:'7px 11px', background:'rgba(239,68,68,.12)', borderRadius:9, border:'1px solid rgba(239,68,68,.25)' }}>{loginErr}</div>}
                 <button type="submit" disabled={!userLogin||!pw||loginBusy} style={{ padding:'12px', borderRadius:11, border:'none', background:(!userLogin||!pw||loginBusy)?'rgba(79,70,229,0.28)':'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', fontWeight:700, fontSize:13, cursor:(!userLogin||!pw||loginBusy)?'not-allowed':'pointer', fontFamily:'inherit' }}>
-                  {loginBusy ? 'Verificando...' : 'Iniciar Sesion'}
+                  {loginBusy ? 'Verificando...' : 'Iniciar Sesión'}
                 </button>
-                <p style={{ color:'rgba(255,255,255,0.25)', fontSize:10, textAlign:'center' }}>Las cuentas de usuario requieren aprobacion del administrador</p>
+                <p style={{ color:'rgba(255,255,255,0.25)', fontSize:10, textAlign:'center' }}>Las cuentas de usuario requieren aprobación del administrador</p>
               </form>
             )}
 
@@ -1099,9 +1099,9 @@ export default function Galaxy() {
                 <div style={{ textAlign:'center', padding:'16px 0' }}>
                   <div style={{ fontSize:32, marginBottom:10 }}>✅</div>
                   <div style={{ color:'#4ade80', fontWeight:700, fontSize:14, marginBottom:6 }}>Solicitud enviada</div>
-                  <p style={{ color:'rgba(255,255,255,0.4)', fontSize:12, lineHeight:1.5 }}>El administrador revisara tu solicitud y recibiras un email cuando sea aprobada.</p>
+                  <p style={{ color:'rgba(255,255,255,0.4)', fontSize:12, lineHeight:1.5 }}>El administrador revisará tu solicitud y recibirás un email cuando sea aprobada.</p>
                   <button onClick={()=>{ setLoginTab('user'); setRegDone(false) }} style={{ marginTop:16, padding:'10px 20px', borderRadius:10, border:'1px solid rgba(79,70,229,0.5)', background:'rgba(79,70,229,0.2)', color:'#818cf8', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
-                    Ir a Iniciar Sesion
+                    Ir a Iniciar Sesión
                   </button>
                 </div>
               ) : (
@@ -1119,13 +1119,13 @@ export default function Galaxy() {
                     onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
                   />
                   <input type="password" value={regPw} onChange={e=>{setRegPw(e.target.value);setRegErr('')}}
-                    placeholder="Contrasena (min. 6 caracteres)"
+                    placeholder="Contraseña (mín. 6 caracteres)"
                     style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 13px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
                     onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.7)'}
                     onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
                   />
                   <input type="text" value={regReason} onChange={e=>setRegReason(e.target.value)}
-                    placeholder="Por que quieres acceso? (opcional)"
+                    placeholder="¿Por qué quieres acceso? (opcional)"
                     style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 13px', color:'#fff', fontSize:IS_MOBILE?16:13, outline:'none', fontFamily:'inherit' }}
                     onFocus={e=>e.target.style.borderColor='rgba(99,102,241,.7)'}
                     onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
@@ -1134,7 +1134,7 @@ export default function Galaxy() {
                   <button type="submit" disabled={!regUser||!regEmail||regPw.length<6||regBusy} style={{ padding:'12px', borderRadius:11, border:'none', background:(!regUser||!regEmail||regPw.length<6||regBusy)?'rgba(79,70,229,0.28)':'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                     {regBusy ? 'Enviando...' : 'Solicitar Acceso'}
                   </button>
-                  <p style={{ color:'rgba(255,255,255,0.22)', fontSize:10, textAlign:'center' }}>Tu cuenta sera activada tras revision del administrador</p>
+                  <p style={{ color:'rgba(255,255,255,0.22)', fontSize:10, textAlign:'center' }}>Tu cuenta será activada tras revisión del administrador</p>
                 </form>
               )
             )}

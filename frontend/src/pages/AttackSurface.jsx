@@ -2,10 +2,10 @@ import { useState, useMemo, useEffect } from 'react'
 import { AlertTriangle, Lock, Server, Clock, Search, Plus, RefreshCw, CheckCircle, X, Zap } from 'lucide-react'
 import api from '../api/client'
 
-const SK_ASSETS  = 'aura_surface_assets'
-const SK_VULNS   = 'aura_surface_vulns'
-const SK_CREDS   = 'aura_surface_creds'
-const SK_CHANGES = 'aura_surface_changes'
+const SK_ASSETS  = 'bdev_surface_assets'
+const SK_VULNS   = 'bdev_surface_vulns'
+const SK_CREDS   = 'bdev_surface_creds'
+const SK_CHANGES = 'bdev_surface_changes'
 
 function load(key, fallback) {
   try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback }

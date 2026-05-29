@@ -563,7 +563,7 @@ function DeployGuide() {
       color: 'text-cyan-400',
       content: [
         { type: 'text', value: 'Sube las imágenes a GitHub Container Registry (ghcr.io) — 100% gratuito.' },
-        { type: 'code', lang: 'bash', value: '# Login en ghcr.io (usa tu GitHub token)\necho $GITHUB_TOKEN | docker login ghcr.io -u TU_USUARIO --password-stdin\n\n# Build y push backend\ndocker build -t ghcr.io/TU_USUARIO/aura-backend:latest ./backend\ndocker push ghcr.io/TU_USUARIO/aura-backend:latest\n\n# Build y push frontend\ndocker build -t ghcr.io/TU_USUARIO/aura-frontend:latest ./frontend\ndocker push ghcr.io/TU_USUARIO/aura-frontend:latest' },
+        { type: 'code', lang: 'bash', value: '# Login en ghcr.io (usa tu GitHub token)\necho $GITHUB_TOKEN | docker login ghcr.io -u TU_USUARIO --password-stdin\n\n# Build y push backend\ndocker build -t ghcr.io/TU_USUARIO/bdev-backend:latest ./backend\ndocker push ghcr.io/TU_USUARIO/bdev-backend:latest\n\n# Build y push frontend\ndocker build -t ghcr.io/TU_USUARIO/bdev-frontend:latest ./frontend\ndocker push ghcr.io/TU_USUARIO/bdev-frontend:latest' },
         { type: 'text', value: 'Luego cambia YOUR_REGISTRY por ghcr.io/TU_USUARIO en los manifests de kubernetes/' },
       ]
     },

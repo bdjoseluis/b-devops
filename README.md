@@ -30,7 +30,7 @@
 ## Kali Linux VM
 
 En Configuración → Kali Linux VM, añade IP/usuario/contraseña de tu VM.
-AURA se conectará por SSH y ejecutará las herramientas remotamente.
+B-DEVOPS se conectará por SSH y ejecutará las herramientas remotamente.
 
 ## Aviso Legal
 

@@ -473,7 +473,7 @@ volumes:
 # ═══════════════════════════════════════════════════════════════════════════════
 networks:
   # Red pública: Traefik + frontends + bdev-backend + n8n (enrutados externamente)
-  # name: fija el nombre sin prefijo de proyecto (evita "aura-ops_frontend-net")
+  # name: fija el nombre sin prefijo de proyecto (evita "bdev-ops_frontend-net")
   frontend-net:
     driver: bridge
     name: frontend-net

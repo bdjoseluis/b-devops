@@ -49,8 +49,8 @@ async def supabase_orgs():
 async def services_health():
     """Comprueba si los servicios del docker-compose están accesibles."""
     checks = {
-        "clickhouse": "http://clickhouse:8123/ping",
-        "n8n": "http://n8n:5678/healthz",
+        "clickhouse": "http://bdev-clickhouse:8123/ping",
+        "n8n": "http://bdev-n8n:5678/healthz",
     }
     results = {}
     async with httpx.AsyncClient(timeout=3) as client:
@@ -109,13 +109,17 @@ async def analytics_daily(days: int = 30):
 @router.get("/stack-status")
 async def stack_status():
     """Estado de todos los servicios del stack para el Portal."""
+    import os
+    # Inside Docker, use container names; outside (dev), fall back to localhost
+    _in_docker = os.path.exists("/.dockerenv")
+    _h = lambda name: name if _in_docker else "localhost"
     services = [
-        {"id": "backend",    "name": "B-DEVOPS Backend",   "url": "http://localhost:8000/api/health",  "port": 8000, "icon": "⚡", "color": "green",  "localUrl": "https://api.bdev.qzz.io/docs"},
-        {"id": "frontend",   "name": "B-DEVOPS Frontend",  "url": "http://localhost:3000",             "port": 3000, "icon": "🖥️", "color": "cyan",   "localUrl": "https://app.bdev.qzz.io"},
-        {"id": "n8n",        "name": "n8n Workflows",  "url": "http://localhost:5678/healthz",     "port": 5678, "icon": "🔄", "color": "orange", "localUrl": "https://crm.bdev.qzz.io"},
-        {"id": "clickhouse", "name": "ClickHouse",     "url": "http://localhost:8123/ping",        "port": 8123, "icon": "📊", "color": "yellow", "localUrl": "https://app.bdev.qzz.io:8123/play"},
-        {"id": "grafana",    "name": "Grafana",        "url": "http://localhost:9091/api/health",  "port": 9091, "icon": "📈", "color": "orange", "localUrl": "https://monitor.bdev.qzz.io/grafana"},
-        {"id": "postgres",   "name": "PostgreSQL",     "url": None,                               "port": 5432, "icon": "🐘", "color": "blue",   "localUrl": None},
+        {"id": "backend",    "name": "B-DEVOPS Backend",  "url": f"http://{_h('bdev-backend')}:8000/api/health",  "port": 8000, "icon": "⚡", "color": "green",  "localUrl": "https://api.bdev.qzz.io/docs"},
+        {"id": "frontend",   "name": "B-DEVOPS Frontend", "url": f"http://{_h('bdev-frontend')}:80",              "port": 3000, "icon": "🖥️", "color": "cyan",   "localUrl": "https://app.bdev.qzz.io"},
+        {"id": "n8n",        "name": "n8n Workflows",     "url": f"http://{_h('bdev-n8n')}:5678/healthz",         "port": 5678, "icon": "🔄", "color": "orange", "localUrl": "https://crm.bdev.qzz.io"},
+        {"id": "clickhouse", "name": "ClickHouse",        "url": f"http://{_h('bdev-clickhouse')}:8123/ping",     "port": 8123, "icon": "📊", "color": "yellow", "localUrl": "https://monitor.bdev.qzz.io/grafana"},
+        {"id": "grafana",    "name": "Grafana",           "url": f"http://{_h('bdev-grafana')}:3000/api/health",  "port": 3000, "icon": "📈", "color": "orange", "localUrl": "https://monitor.bdev.qzz.io/grafana"},
+        {"id": "postgres",   "name": "PostgreSQL",        "url": None,                                            "port": 5432, "icon": "🐘", "color": "blue",   "localUrl": None},
     ]
     results = []
     async with httpx.AsyncClient(timeout=2) as client:
@@ -131,10 +135,11 @@ async def stack_status():
                 except Exception:
                     item["status"] = "down"
             else:
-                # PostgreSQL — check TCP
+                # PostgreSQL — check TCP (use container name inside Docker)
                 try:
-                    import asyncio as aio
-                    await aio.wait_for(aio.open_connection("localhost", 5432), timeout=1)
+                    import asyncio as aio, os as _os
+                    pg_host = "bdev-postgres" if _os.path.exists("/.dockerenv") else "localhost"
+                    await aio.wait_for(aio.open_connection(pg_host, 5432), timeout=1)
                     item["status"] = "up"
                 except Exception:
                     item["status"] = "down"

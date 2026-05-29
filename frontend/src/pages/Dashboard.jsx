@@ -36,17 +36,21 @@ const ZONES = [
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [liveStats, setLiveStats] = useState(null)
-  const [chStats,   setChStats]   = useState(null)
+  const [liveStats,    setLiveStats]    = useState(null)
+  const [chStats,      setChStats]      = useState(null)
   const [recentAudits, setRecentAudits] = useState([])
+  const [stackStatus,  setStackStatus]  = useState(null)
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
     settings.dashboardStats().then(setLiveStats).catch(() => {})
     devops.analyticsStats().then(setChStats).catch(() => {})
     devops.analyticsRecent(5).then(d => setRecentAudits(d?.audits || [])).catch(() => {})
+    devops.stackStatus().then(setStackStatus).catch(() => {})
     const t = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(t)
+    // Refresh stack status every 30s
+    const st = setInterval(() => devops.stackStatus().then(setStackStatus).catch(() => {}), 30000)
+    return () => { clearInterval(t); clearInterval(st) }
   }, [])
 
   const totalTools = 94
@@ -150,27 +154,42 @@ export default function Dashboard() {
 
         {/* ── System status ──────────────────────────────────────────────────── */}
         <div>
-          <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:12 }}>
+          <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
             Estado del sistema
+            {stackStatus && (
+              <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, background: stackStatus.summary.down === 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: stackStatus.summary.down === 0 ? '#10b981' : '#ef4444', fontFamily:'monospace' }}>
+                {stackStatus.summary.up}/{stackStatus.summary.total} UP
+              </span>
+            )}
           </div>
           <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, padding:'16px', display:'flex', flexDirection:'column', gap:10 }}>
-            {[
-              { label:'Frontend (B-DEVOPS)',  status:'online',  color:'#10b981', extra:'localhost:3000' },
-              { label:'Backend API',         status:'online',  color:'#10b981', extra:'localhost:8000' },
-              { label:'PostgreSQL',          status:'online',  color:'#10b981', extra:'localhost:5432' },
-              { label:'Portfolio (B-DEVOPS)',   status: 'online', color:'#10b981', extra:'localhost:3001' },
-              { label:'Cloudflare Tunnel',   status:'active',  color:'#f59e0b', extra:'bdev.qzz.io' },
-            ].map(s => (
-              <div key={s.label} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ width:6, height:6, borderRadius:'50%', background:s.color, boxShadow:`0 0 8px ${s.color}`, flexShrink:0 }}/>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ color:'rgba(255,255,255,0.6)', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.label}</div>
+            {stackStatus ? stackStatus.services.map(s => {
+              const c = s.status === 'up' ? '#10b981' : s.status === 'degraded' ? '#f59e0b' : '#ef4444'
+              return (
+                <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:c, boxShadow:`0 0 8px ${c}`, flexShrink:0 }}/>
+                  <span style={{ fontSize:14, flexShrink:0 }}>{s.icon}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ color:'rgba(255,255,255,0.6)', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</div>
+                  </div>
+                  {s.latency_ms != null && (
+                    <span style={{ color:'rgba(255,255,255,0.2)', fontSize:9, fontFamily:'monospace', flexShrink:0 }}>{s.latency_ms}ms</span>
+                  )}
+                  <span style={{ color:c, fontSize:9, fontFamily:'monospace', fontWeight:700, flexShrink:0, textTransform:'uppercase' }}>{s.status}</span>
                 </div>
-                <span style={{ color:'rgba(255,255,255,0.25)', fontSize:9, fontFamily:'monospace' }}>{s.extra}</span>
-              </div>
-            ))}
+              )
+            }) : (
+              /* Loading skeleton */
+              [1,2,3,4,5].map(i => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:'rgba(255,255,255,0.1)', flexShrink:0 }}/>
+                  <div style={{ flex:1, height:10, borderRadius:4, background:'rgba(255,255,255,0.05)' }}/>
+                  <div style={{ width:30, height:10, borderRadius:4, background:'rgba(255,255,255,0.05)' }}/>
+                </div>
+              ))
+            )}
             <div style={{ marginTop:6, paddingTop:10, borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ color:'rgba(255,255,255,0.2)', fontSize:10 }}>Todos los servicios operativos</span>
+              <span style={{ color:'rgba(255,255,255,0.2)', fontSize:10 }}>Actualización automática cada 30s</span>
               <Link to="/infra" style={{ color:'rgba(255,255,255,0.4)', fontSize:10, textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
                 Ver infra <ArrowRight size={10}/>
               </Link>

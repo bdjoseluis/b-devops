@@ -143,12 +143,12 @@ services:
     container_name: bdev-backend
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-bdev}:${POSTGRES_PASSWORD:-REDACTED}@bdev-postgres:5432/${POSTGRES_DB:-bdev_ops}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@bdev-postgres:5432/${POSTGRES_DB}
       - CLICKHOUSE_HOST=bdev-clickhouse
       - CLICKHOUSE_PORT=8123
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
-      - SECRET_KEY=${SECRET_KEY:-changeme_backend_secret}
+      - SECRET_KEY=${SECRET_KEY}
       - N8N_URL=http://bdev-n8n:5678
     volumes:
       - ./backend/config.json:/app/config.json
@@ -184,9 +184,9 @@ services:
     container_name: bdev-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-bdev}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-REDACTED}
-      POSTGRES_DB: ${POSTGRES_DB:-bdev_ops}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     # Sin ports: — solo accesible desde backend-net
@@ -195,7 +195,7 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bdev}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -241,8 +241,8 @@ services:
     restart: unless-stopped
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-REDACTED}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       # N8N_ENCRYPTION_KEY: gestionado desde el archivo /home/node/.n8n/config del volumen
       # No pasar aquí para evitar conflictos de comparación con el archivo de configuración
       # URL pública para generación de webhooks (Notion, Zapier, etc.)
@@ -254,9 +254,9 @@ services:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=bdev-postgres
       - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-bdev_ops}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER:-bdev}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-REDACTED}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_POSTGRESDB_SCHEMA=n8n
     volumes:
       - n8n_data:/home/node/.n8n
@@ -347,8 +347,8 @@ services:
     container_name: bdev-grafana
     restart: unless-stopped
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-REDACTED}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_SERVER_ROOT_URL=https://monitor.bdev.qzz.io/grafana
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_USERS_ALLOW_SIGN_UP=false

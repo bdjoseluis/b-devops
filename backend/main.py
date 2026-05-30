@@ -1,12 +1,12 @@
 ﻿import sys
+import os
 from pathlib import Path
 
-# Add backend dir to path so imports work
 sys.path.insert(0, str(Path(__file__).parent))
 
+import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from routers import (
@@ -20,14 +20,26 @@ from routers import monitor_router
 from routers import clients_router
 from routers import integrations_router
 
+DB_URL = os.environ.get("DATABASE_URL", "")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Crear tablas en BD al arrancar
+    # Connection pool compartido — evita abrir una conexión nueva por request
+    if DB_URL:
+        app.state.db_pool = await asyncpg.create_pool(
+            DB_URL, min_size=2, max_size=10, command_timeout=30
+        )
+    else:
+        app.state.db_pool = None
+
     await auth_router.ensure_users_table()
     await clients_router.ensure_clients_table()
     await integrations_router.ensure_fuente_column()
     yield
+
+    if app.state.db_pool:
+        await app.state.db_pool.close()
 
 
 app = FastAPI(

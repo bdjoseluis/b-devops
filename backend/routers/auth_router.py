@@ -17,18 +17,33 @@ import smtplib
 import asyncio
 import asyncpg
 import aiohttp
+from collections import defaultdict
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config_manager import load_config, save_config
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 bearer = HTTPBearer(auto_error=False)
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "changeme_backend_secret")
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
 TOKEN_TTL  = 60 * 60 * 24 * 7   # 7 días
 DB_URL     = os.environ.get("DATABASE_URL", "")
+
+# ── Rate limiting en memoria (login) ──────────────────────────────────────────
+# Máximo 10 intentos por IP en ventana de 10 minutos
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_RATE_WINDOW   = 600   # segundos
+_RATE_MAX      = 10    # intentos
+
+def _check_rate_limit(ip: str):
+    now    = time.time()
+    window = now - _RATE_WINDOW
+    _login_attempts[ip] = [t for t in _login_attempts[ip] if t > window]
+    if len(_login_attempts[ip]) >= _RATE_MAX:
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 10 minutos.")
+    _login_attempts[ip].append(now)
 
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
@@ -161,16 +176,19 @@ async def _fire_n8n(path: str, payload: dict):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/login")
-async def login(body: dict):
+async def login(body: dict, request: Request):
     """Login: admin (single password) o usuario registrado (username + password)."""
+    client_ip = request.client.host if request.client else "unknown"
+    _check_rate_limit(client_ip)
+
     password = body.get("password", "").strip()
     username = body.get("username", "").strip()
     cfg      = load_config()
 
     # ── Admin login (no username, just password) ──────────────────────────────
     if not username:
-        stored = cfg.get("auth", {}).get("password", "REDACTED")
-        if not password or password != stored:
+        stored = cfg.get("auth", {}).get("password", "")
+        if not password or not hmac.compare_digest(password.encode(), stored.encode()):
             raise HTTPException(status_code=401, detail="Contraseña incorrecta")
         token = _sign({"sub": "admin", "role": "admin", "exp": int(time.time()) + TOKEN_TTL})
         return {"token": token, "expires_in": TOKEN_TTL, "role": "admin"}
@@ -409,8 +427,8 @@ async def verify_admin(body: dict, user=Depends(auth_required)):
     if not pin:
         raise HTTPException(status_code=400, detail="PIN requerido")
     cfg    = load_config()
-    stored = cfg.get("auth", {}).get("admin_pin", "REDACTED")
-    if pin != stored:
+    stored = cfg.get("auth", {}).get("admin_pin", "")
+    if not hmac.compare_digest(pin.encode(), stored.encode()):
         raise HTTPException(status_code=401, detail="PIN incorrecto")
     admin_tok = _sign({"sub": "admin", "role": "superadmin", "exp": int(time.time()) + 3600})
     return {"ok": True, "token": admin_tok}
@@ -423,8 +441,8 @@ async def change_admin_pin(body: dict, user=Depends(auth_required)):
     if len(new_pin) < 4:
         raise HTTPException(status_code=400, detail="El PIN debe tener al menos 4 caracteres")
     cfg    = load_config()
-    stored = cfg.get("auth", {}).get("admin_pin", "REDACTED")
-    if current != stored:
+    stored = cfg.get("auth", {}).get("admin_pin", "")
+    if not hmac.compare_digest(current.encode(), stored.encode()):
         raise HTTPException(status_code=401, detail="PIN actual incorrecto")
     cfg.setdefault("auth", {})["admin_pin"] = new_pin
     save_config(cfg)

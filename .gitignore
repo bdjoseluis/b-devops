@@ -9,6 +9,7 @@ infra/terraform/*.tfplan
 # ── Entorno y secretos ────────────────────────────────────────────────────────
 .env
 pass.txt
+CONTRASEÑAS.md
 # config.json contiene API keys, contraseñas y pines — NUNCA al repo
 backend/config.json
 

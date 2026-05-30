@@ -150,6 +150,9 @@ services:
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
       - SECRET_KEY=${SECRET_KEY}
       - N8N_URL=http://bdev-n8n:5678
+      - INTEGRATION_KEY=${INTEGRATION_KEY:-bdev_int_key_2026}
+      - OUTREACH_DAILY_LIMIT=${OUTREACH_DAILY_LIMIT:-50}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
     volumes:
       - ./backend/config.json:/app/config.json
       - ./backend/reports:/app/reports

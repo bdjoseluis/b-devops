@@ -10,18 +10,20 @@ import {
 
 // ── Quick launch tiles ────────────────────────────────────────────────────────
 const QUICK = [
-  { icon:'🎯', label:'Intelligence Pivot', to:'/pivot',     color:'#e63946' },
-  { icon:'🔐', label:'Auto Auditoría',     to:'/audit',     color:'#8b5cf6' },
-  { icon:'💻', label:'Terminal IA',        to:'/terminal',  color:'#10b981' },
-  { icon:'📡', label:'Shodan',             to:'/tool/shodan', color:'#06b6d4' },
-  { icon:'🦠', label:'VirusTotal',         to:'/tool/virustotal', color:'#f97316' },
-  { icon:'🛡️', label:'Threat Intel',      to:'/tool/threatintel', color:'#ef4444' },
-  { icon:'🔑', label:'Passwords',         to:'/tool/passwords',   color:'#a855f7' },
-  { icon:'🌐', label:'BGP Lookup',        to:'/tool/bgp',         color:'#22d3ee' },
-  { icon:'👤', label:'WhatsMyName',       to:'/tool/whatsmyname', color:'#c084fc' },
-  { icon:'🔤', label:'Encoder',           to:'/tool/encoder',     color:'#06b6d4' },
-  { icon:'🔢', label:'IP Calc',           to:'/tool/ipcalc',      color:'#22d3ee' },
-  { icon:'🔒', label:'SSL Check',         to:'/tool/sslcheck',    color:'#10b981' },
+  { icon:'🎯', label:'Intelligence Pivot', to:'/pivot',              color:'#e63946' },
+  { icon:'🔐', label:'Auto Auditoría',     to:'/audit',              color:'#8b5cf6' },
+  { icon:'💻', label:'Terminal IA',        to:'/terminal',           color:'#10b981' },
+  { icon:'📡', label:'Shodan',             to:'/tool/shodan',        color:'#06b6d4' },
+  { icon:'🦠', label:'VirusTotal',         to:'/tool/virustotal',    color:'#f97316' },
+  { icon:'🛡️', label:'Threat Intel',      to:'/tool/threatintel',   color:'#ef4444' },
+  { icon:'🔑', label:'Passwords',          to:'/tool/passwords',    color:'#a855f7' },
+  { icon:'🌐', label:'BGP Lookup',         to:'/tool/bgp',          color:'#22d3ee' },
+  { icon:'👤', label:'WhatsMyName',        to:'/tool/whatsmyname',  color:'#c084fc' },
+  { icon:'🔤', label:'Encoder',            to:'/tool/encoder',      color:'#06b6d4' },
+  { icon:'🔢', label:'IP Calc',            to:'/tool/ipcalc',       color:'#22d3ee' },
+  { icon:'🔒', label:'SSL Check',          to:'/tool/sslcheck',     color:'#10b981' },
+  { icon:'📥', label:'Leads',              to:'/leads',             color:'#10b981' },
+  { icon:'👥', label:'CRM',                to:'/clientes',          color:'#a855f7' },
 ]
 
 // ── Tool zones summary ────────────────────────────────────────────────────────

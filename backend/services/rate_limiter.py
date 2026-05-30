@@ -12,6 +12,7 @@ class RateLimiter:
         self.calls  = calls
         self.period = period
         self._store: dict[str, list[float]] = defaultdict(list)
+        self._last_gc: float = 0.0
 
     async def __call__(self, request: Request):
         ip  = request.client.host if request.client else "unknown"
@@ -26,6 +27,13 @@ class RateLimiter:
                 detail=f"Límite de {self.calls} llamadas por {self.period}s superado. Espera un momento."
             )
         self._store[key].append(now)
+
+        # Purge empty keys every 5 minutes to prevent unbounded growth
+        if now - self._last_gc > 300:
+            self._last_gc = now
+            stale = [k for k, v in self._store.items() if not v]
+            for k in stale:
+                del self._store[k]
 
 
 # Instancias reutilizables por tipo de endpoint

@@ -64,6 +64,7 @@ export default function Configuracion() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [testResult, setTestResult] = useState(null)
   const [testing, setTesting] = useState(false)
   const [showKeys, setShowKeys] = useState({})
@@ -108,6 +109,7 @@ export default function Configuracion() {
   const saveAll = async () => {
     setSaving(true)
     setSaved(false)
+    setSaveError('')
     try {
       await settings.updateApis(localApis)
       await settings.updateAuditor(auditor)
@@ -117,7 +119,12 @@ export default function Configuracion() {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (e) {
-      alert('Error al guardar: ' + e.message)
+      const status = e?.response?.status
+      if (status === 403) {
+        setSaveError('Se requiere rol admin para guardar la configuración.')
+      } else {
+        setSaveError(e?.response?.data?.detail || e.message || 'Error al guardar')
+      }
     } finally {
       setSaving(false)
     }
@@ -188,6 +195,13 @@ export default function Configuracion() {
           {saving ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar Todo'}
         </button>
       </div>
+      {saveError && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
+          <AlertTriangle size={14} className="shrink-0" />
+          {saveError}
+          <button onClick={() => setSaveError('')} className="ml-auto text-red-500 hover:text-red-300"><XCircle size={13}/></button>
+        </div>
+      )}
 
       {/* Auditor info */}
       <div className="card border-blue-700/30">

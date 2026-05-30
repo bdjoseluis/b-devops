@@ -236,7 +236,10 @@ async def login(body: dict, request: Request):
     # ── Admin login (no username, just password) ──────────────────────────────
     if not username:
         stored = cfg.get("auth", {}).get("password", "")
-        if not password or not hmac.compare_digest(password.encode(), stored.encode()):
+        # Fallback to ADMIN_PASSWORD env var for fresh installs (config password not set yet)
+        if not stored:
+            stored = os.environ.get("ADMIN_PASSWORD", "")
+        if not password or not stored or not hmac.compare_digest(password.encode(), stored.encode()):
             raise HTTPException(status_code=401, detail="Contraseña incorrecta")
         token         = _sign({"sub": "admin", "role": "admin", "exp": int(time.time()) + TOKEN_TTL})
         refresh_token = await _create_refresh_token("admin")
@@ -468,7 +471,7 @@ async def verify_admin(body: dict, user=Depends(auth_required)):
 
 
 @router.post("/change-admin-pin")
-async def change_admin_pin(body: dict, user=Depends(auth_required)):
+async def change_admin_pin(body: dict, user=Depends(admin_required)):
     current = body.get("current", "").strip()
     new_pin = body.get("new_pin", "").strip()
     if len(new_pin) < 4:
@@ -483,7 +486,7 @@ async def change_admin_pin(body: dict, user=Depends(auth_required)):
 
 
 @router.post("/change-password")
-async def change_password(body: dict, user=Depends(auth_required)):
+async def change_password(body: dict, user=Depends(admin_required)):
     new_password = body.get("new_password", "").strip()
     if len(new_password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")

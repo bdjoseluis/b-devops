@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from routers.auth_router import auth_required
+from routers.auth_router import auth_required, admin_required
 from pydantic import BaseModel
 from services import nmap_service, kali_service, shodan_service
 from services.rate_limiter import scan_limiter
@@ -43,7 +43,7 @@ async def kali_tool(req: KaliRequest):
 
 
 @router.post("/kali/raw")
-async def kali_raw(req: RawRequest):
+async def kali_raw(req: RawRequest, _admin=Depends(admin_required)):
     return await kali_service.run_raw(req.command)
 
 

@@ -43,6 +43,12 @@ async def ensure_clients_table():
                 ultima_actividad TIMESTAMPTZ DEFAULT NOW()
             )
         """)
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_clients_estado  ON clients (estado)"
+        )
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_clients_fuente  ON clients (fuente)"
+        )
         await conn.close()
         print("[clients] DB table ready")
     except Exception as e:

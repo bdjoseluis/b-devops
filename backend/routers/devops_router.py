@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends
 from routers.auth_router import auth_required
 from config_manager import get_api_key, load_config
 from services import vercel_service, supabase_service, clickhouse_service
+import db as _db
 
 router = APIRouter(prefix="/api/devops", tags=["devops"], dependencies=[Depends(auth_required)])
 
@@ -136,11 +137,13 @@ async def stack_status():
                 except Exception:
                     item["status"] = "down"
             else:
-                # PostgreSQL — check TCP (use container name inside Docker)
+                # PostgreSQL — real query via pool (better than TCP-only check)
                 try:
-                    import asyncio as aio, os as _os
-                    pg_host = "bdev-postgres" if _os.path.exists("/.dockerenv") else "localhost"
-                    await aio.wait_for(aio.open_connection(pg_host, 5432), timeout=1)
+                    import time as _time
+                    t0 = _time.monotonic()
+                    async with _db.get_conn() as conn:
+                        await conn.fetchval("SELECT 1")
+                    item["latency_ms"] = round((_time.monotonic() - t0) * 1000)
                     item["status"] = "up"
                 except Exception:
                     item["status"] = "down"

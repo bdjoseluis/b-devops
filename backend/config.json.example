@@ -3,27 +3,54 @@
     "password": "CHANGE_ME",
     "admin_pin": "CHANGE_ME"
   },
+  "auditor": {
+    "name": "Tu Nombre",
+    "company": "Tu Empresa S.L.",
+    "email": "auditor@tudominio.com",
+    "jurisdiction": "COBERTURA GLOBAL"
+  },
+  "apis": {
+    "gemini": "",
+    "groq": "",
+    "shodan": "",
+    "virustotal": "",
+    "hunter": "",
+    "securitytrails": "",
+    "hibp": "",
+    "abuseipdb": "",
+    "censys_id": "",
+    "censys_secret": "",
+    "urlscan": "",
+    "dehashed_email": "",
+    "dehashed": "",
+    "c99": "",
+    "leakradar": "",
+    "google_places": "",
+    "numverify": "",
+    "fullcontact": "",
+    "vercel": "",
+    "supabase": "",
+    "notion": ""
+  },
+  "nmap_path": "nmap",
+  "kali_ssh": {
+    "enabled": false,
+    "host": "",
+    "port": 22,
+    "user": "",
+    "password": "",
+    "key_path": ""
+  },
+  "scan_defaults": {
+    "timeout": 30,
+    "max_subdomains": 200
+  },
   "smtp": {
     "enabled": false,
+    "email": "tu-email@gmail.com",
+    "password": "app-password-aqui",
     "host": "smtp.gmail.com",
     "port": 587,
-    "email": "tu-email@gmail.com",
-    "password": "CHANGE_ME",
     "to": "admin@tudominio.com"
-  },
-  "shodan_api_key": "",
-  "virustotal_api_key": "",
-  "gemini_api_key": "",
-  "groq_api_key": "",
-  "hunter_api_key": "",
-  "securitytrails_api_key": "",
-  "ipinfo_token": "",
-  "urlscan_api_key": "",
-  "c99_api_key": "",
-  "leakradar_api_key": "",
-  "dehashed_email": "",
-  "dehashed_api_key": "",
-  "hibp_api_key": "",
-  "censys_api_id": "",
-  "censys_api_secret": ""
+  }
 }

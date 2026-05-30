@@ -11,6 +11,9 @@ import { clients as clientsApi } from '../api/client'
 const ESTADOS = ['Prospecto', 'Contactado', 'Propuesta', 'Activo', 'Pausado', 'Cerrado']
 const SECTORES = ['Tecnología', 'Salud', 'Retail', 'Finanzas', 'Educación', 'Legal', 'Consultoría', 'Media', 'Industria', 'Otro']
 const SERVICIOS = ['Auditoría Web', 'OSINT', 'Pentest', 'Consultoría SEO', 'Desarrollo Web', 'Ciberseguridad', 'Soporte', 'Formación', 'Otro']
+const EXTERNAL_SOURCES = ['carsimport', 'psicologia', 'bolsos-clari', 'otro']
+const FUENTE_LABEL = { 'carsimport': 'Carsimport', 'psicologia': 'Psicología', 'bolsos-clari': 'Bolsos Clari', 'bdev-platform': 'Plataforma', 'otro': 'Otro' }
+const FUENTE_COLOR = { 'carsimport': 'text-blue-400 bg-blue-900/20 border-blue-700/30', 'psicologia': 'text-purple-400 bg-purple-900/20 border-purple-700/30', 'bolsos-clari': 'text-pink-400 bg-pink-900/20 border-pink-700/30', 'otro': 'text-gray-400 bg-gray-900/20 border-gray-700/30' }
 
 const ESTADO_STYLE = {
   'Prospecto':  'bg-gray-500/20 text-gray-400 border border-gray-600/30',
@@ -363,10 +366,15 @@ export default function Clientes() {
                     </div>
                     <p className="text-gray-500 text-xs truncate">{c.empresa || c.email || '—'}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {c.valor_estimado > 0 && (
                       <span className="text-xs font-mono text-gray-400 hidden sm:block">
                         {Number(c.valor_estimado).toLocaleString('es-ES')}€
+                      </span>
+                    )}
+                    {EXTERNAL_SOURCES.includes(c.fuente) && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium hidden md:block ${FUENTE_COLOR[c.fuente] || 'text-gray-400 bg-gray-900/20 border-gray-700/30'}`}>
+                        {FUENTE_LABEL[c.fuente] || c.fuente}
                       </span>
                     )}
                     <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${ESTADO_STYLE[c.estado] || ''}`}>
@@ -414,9 +422,16 @@ export default function Clientes() {
               </div>
 
               <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ESTADO_STYLE[selected.estado] || ''}`}>
-                  {selected.estado}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ESTADO_STYLE[selected.estado] || ''}`}>
+                    {selected.estado}
+                  </span>
+                  {selected.fuente && selected.fuente !== 'bdev-platform' && (
+                    <span className={`text-xs px-2 py-0.5 rounded border font-medium ${FUENTE_COLOR[selected.fuente] || 'text-gray-400 bg-gray-900/20 border-gray-700/30'}`}>
+                      🌐 {FUENTE_LABEL[selected.fuente] || selected.fuente}
+                    </span>
+                  )}
+                </div>
 
                 <div className="space-y-2">
                   {selected.email && (

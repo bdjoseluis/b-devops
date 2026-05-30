@@ -48,8 +48,8 @@ DEFAULT_CONFIG = {
         "max_subdomains": 200
     },
     "auth": {
-        "password": "REDACTED",
-        "admin_pin": "REDACTED"
+        "password": "",
+        "admin_pin": ""
     },
     "smtp": {
         "enabled": False,

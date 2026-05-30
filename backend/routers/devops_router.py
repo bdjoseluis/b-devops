@@ -150,3 +150,31 @@ async def stack_status():
             results.append(item)
     up = sum(1 for r in results if r["status"] == "up")
     return {"services": results, "summary": {"total": len(results), "up": up, "down": len(results) - up}}
+
+
+# ── Docker container logs ─────────────────────────────────────────────────────
+@router.get("/logs/{container}")
+async def container_logs(container: str, lines: int = 100):
+    """Fetch last N lines of logs from a Docker container (runs inside Docker only)."""
+    import os, asyncio, re
+    # Validate container name — only allow alphanumeric, dash, underscore
+    if not re.match(r'^[a-zA-Z0-9_\-]+$', container):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Nombre de contenedor inválido")
+    lines = min(max(lines, 10), 500)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "logs", "--tail", str(lines), "--timestamps", container,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+        log_text = stdout.decode("utf-8", errors="replace")
+        log_lines = log_text.splitlines()
+        return {"container": container, "lines": len(log_lines), "logs": log_lines}
+    except asyncio.TimeoutError:
+        return {"container": container, "error": "Timeout — el contenedor tardó demasiado"}
+    except FileNotFoundError:
+        return {"container": container, "error": "Docker CLI no disponible en este entorno"}
+    except Exception as e:
+        return {"container": container, "error": str(e)}

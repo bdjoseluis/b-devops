@@ -66,6 +66,7 @@ export const devops = {
   analyticsStats:  () => api.get('/devops/analytics/stats').then(r => r.data),
   analyticsRecent: (limit = 20) => api.get(`/devops/analytics/recent?limit=${limit}`).then(r => r.data),
   analyticsDaily:  (days = 30)  => api.get(`/devops/analytics/daily?days=${days}`).then(r => r.data),
+  containerLogs:   (name, lines = 100) => api.get(`/devops/logs/${name}?lines=${lines}`).then(r => r.data),
 }
 
 export const health = {

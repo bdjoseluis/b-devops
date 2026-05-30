@@ -4,8 +4,86 @@ import {
   Server, Globe, Database, GitBranch, Zap, RefreshCw,
   ExternalLink, CheckCircle, XCircle, Clock, Cpu, HardDrive,
   Activity, Network, Shield, AlertTriangle, Play, Square,
-  ChevronDown, ChevronRight, Link2, Layers, Settings2, Radio
+  ChevronDown, ChevronRight, Link2, Layers, Settings2, Radio,
+  Terminal, Loader2
 } from 'lucide-react'
+
+// ── Container log viewer (added) ──────────────────────────────────────────────
+const CONTAINERS = [
+  'bdev-backend', 'bdev-frontend', 'bdev-n8n', 'bdev-postgres',
+  'bdev-clickhouse', 'bdev-grafana', 'bdev-prometheus', 'bdev-traefik',
+  'bdev-loki', 'bdev-promtail', 'bdev-watchtower',
+]
+
+function LogViewer() {
+  const [container, setContainer] = useState('bdev-backend')
+  const [lines,     setLines]     = useState(50)
+  const [logs,      setLogs]      = useState([])
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState('')
+
+  const fetch = useCallback(async () => {
+    setLoading(true); setError(''); setLogs([])
+    try {
+      const res = await devops.containerLogs(container, lines)
+      if (res.error) { setError(res.error); return }
+      setLogs(res.logs || [])
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message)
+    } finally { setLoading(false) }
+  }, [container, lines])
+
+  const logColor = (line) => {
+    if (/error|exception|critical|fatal/i.test(line)) return 'text-red-400'
+    if (/warn/i.test(line)) return 'text-yellow-400'
+    if (/info|200|201/i.test(line)) return 'text-green-400'
+    if (/debug/i.test(line)) return 'text-gray-500'
+    return 'text-gray-300'
+  }
+
+  return (
+    <section className="mt-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Terminal size={16} className="text-purple-400" />
+        <h2 className="text-white font-bold text-sm">Logs de Contenedores</h2>
+        <span className="text-gray-500 text-xs">— acceso directo desde la UI</span>
+      </div>
+      <div className="bg-dark-300 border border-surface-border rounded-xl overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border flex-wrap">
+          <select value={container} onChange={e => setContainer(e.target.value)}
+            className="bg-dark-400 border border-surface-border text-white text-xs px-3 py-1.5 rounded-lg focus:outline-none">
+            {CONTAINERS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={lines} onChange={e => setLines(Number(e.target.value))}
+            className="bg-dark-400 border border-surface-border text-white text-xs px-3 py-1.5 rounded-lg focus:outline-none">
+            {[25,50,100,200,500].map(n => <option key={n} value={n}>{n} líneas</option>)}
+          </select>
+          <button onClick={fetch} disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40">
+            {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {loading ? 'Cargando...' : 'Ver logs'}
+          </button>
+          {logs.length > 0 && (
+            <span className="text-gray-500 text-xs ml-auto">{logs.length} líneas</span>
+          )}
+        </div>
+        {/* Log output */}
+        <div className="bg-black/40 p-4 font-mono text-xs leading-relaxed overflow-auto max-h-96">
+          {error ? (
+            <span className="text-red-400">{error}</span>
+          ) : logs.length === 0 ? (
+            <span className="text-gray-600">Selecciona un contenedor y pulsa "Ver logs"</span>
+          ) : (
+            logs.map((line, i) => (
+              <div key={i} className={logColor(line)}>{line}</div>
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const TUNNEL_ID  = 'f2060fc8-5ad9-4afd-b9ce-0db3a2b5123f'
@@ -457,6 +535,8 @@ export default function Infra() {
           </div>
         </div>
       </section>
+
+      <LogViewer />
     </div>
   )
 }

@@ -682,9 +682,20 @@ export default function Outreach() {
   const selectAll    = () => setSelected(filtered.map(l => l.id))
   const clearSelect  = () => setSelected([])
 
-  const exportCsv = () => {
-    const url = outreachApi.exportCsvUrl(filterStatus !== 'all' ? filterStatus : null)
-    window.open('/api' + url.replace('/api', ''), '_blank')
+  const exportCsv = async () => {
+    try {
+      const path = outreachApi.exportCsvUrl(filterStatus !== 'all' ? filterStatus : null)
+      const token = localStorage.getItem('bdev_token') || ''
+      const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) throw new Error('Error al exportar')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'outreach_leads.csv'; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('Error al exportar: ' + e.message)
+    }
   }
 
   return (

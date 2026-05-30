@@ -1,6 +1,6 @@
 ﻿import { useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { settings, devops, clients } from '../api/client'
+import { settings, devops, clients, outreach as outreachApi } from '../api/client'
 import {
   Search, Zap, Terminal, Shield, FileText, Settings, TrendingUp,
   Globe, Network, AlertTriangle, Clock, ScanLine, CheckCircle,
@@ -43,7 +43,8 @@ export default function Dashboard() {
   const [chStats,      setChStats]      = useState(null)
   const [recentAudits, setRecentAudits] = useState([])
   const [stackStatus,  setStackStatus]  = useState(null)
-  const [crmStats,     setCrmStats]     = useState(null)
+  const [crmStats,      setCrmStats]     = useState(null)
+  const [outreachStats, setOutreachStats] = useState(null)
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function Dashboard() {
     devops.analyticsRecent(5).then(d => setRecentAudits(d?.audits || [])).catch(() => {})
     devops.stackStatus().then(setStackStatus).catch(() => {})
     clients.stats().then(setCrmStats).catch(() => {})
+    outreachApi.stats().then(setOutreachStats).catch(() => {})
     const t = setInterval(() => setTime(new Date()), 1000)
     const st = setInterval(() => devops.stackStatus().then(setStackStatus).catch(() => {}), 30000)
     return () => { clearInterval(t); clearInterval(st) }
@@ -239,6 +241,40 @@ export default function Dashboard() {
                   {f}: {n}
                 </span>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Outreach pipeline mini ────────────────────────────────────────────── */}
+      {outreachStats && outreachStats.total > 0 && (
+        <div style={{ background:'rgba(34,197,94,0.04)', border:'1px solid rgba(34,197,94,0.12)', borderRadius:14, padding:'16px 20px', marginBottom:20 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', display:'flex', alignItems:'center', gap:6 }}>
+              🎯 Outreach Pipeline
+            </div>
+            <Link to="/outreach" style={{ color:'rgba(34,197,94,0.6)', fontSize:10, textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
+              Ver outreach <ArrowRight size={10}/>
+            </Link>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(110px,1fr))', gap:10 }}>
+            {[
+              { label:'Total leads',     v: outreachStats.total,                            color:'#fff' },
+              { label:'Alta opp.',       v: outreachStats.high_opportunity,                 color:'#f97316' },
+              { label:'Con email',       v: outreachStats.has_email,                        color:'#22c55e' },
+              { label:'Email listo',     v: outreachStats.by_status?.email_generated || 0,  color:'#60a5fa' },
+              { label:'Enviados',        v: outreachStats.by_status?.sent || 0,             color:'#fbbf24' },
+              { label:'Convertidos',     v: outreachStats.by_status?.converted || 0,        color:'#a78bfa' },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign:'center' }}>
+                <div style={{ color:s.color, fontSize:18, fontWeight:800, fontFamily:'monospace', lineHeight:1 }}>{s.v}</div>
+                <div style={{ color:'rgba(255,255,255,0.25)', fontSize:10, marginTop:3 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {outreachStats.sent_today > 0 && (
+            <div style={{ marginTop:10, paddingTop:8, borderTop:'1px solid rgba(255,255,255,0.05)', fontSize:10, color:'rgba(255,255,255,0.25)', display:'flex', gap:12 }}>
+              <span>Emails hoy: <span style={{ color:'#fbbf24' }}>{outreachStats.sent_today}/{outreachStats.daily_limit}</span></span>
             </div>
           )}
         </div>

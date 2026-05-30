@@ -203,7 +203,7 @@ export const outreach = {
   setFollowUp:     (id, date)  => api.post(`/outreach/${id}/follow-up`, { follow_up_at: date }).then(r => r.data),
   pendingFollowUps:()          => api.get('/outreach/follow-ups/pending').then(r => r.data),
   // Export
-  exportCsvUrl:    (status)    => `/api/outreach/export/csv${status ? `?status=${status}` : ''}`,
+  exportCsvUrl:    (status)    => `/api/outreach/export/csv${status ? `?status=${encodeURIComponent(status)}` : ''}`,
 }
 
 export default api

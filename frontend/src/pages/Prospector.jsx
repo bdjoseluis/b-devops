@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { prospector } from '../api/client'
+import { useNavigate } from 'react-router-dom'
+import { prospector, outreach as outreachApi } from '../api/client'
 import Spinner from '../components/Spinner'
 import {
   Building2, Search, MapPin, Globe, Phone, Mail,
   TrendingUp, AlertTriangle, CheckCircle, Star,
-  Download, Filter, ChevronDown, ChevronUp, Map
+  Download, Filter, ChevronDown, ChevronUp, Map, Target, Loader2
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -21,6 +22,7 @@ const CATEGORIES = [
 const RADIUS_OPTIONS = [2, 5, 10, 20, 50]
 
 export default function Prospector() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('local')
 
   // Local search state
@@ -33,6 +35,8 @@ export default function Prospector() {
   const [filter, setFilter] = useState('all')
   const [sortBy, setSortBy] = useState('opportunity')
   const [selectedBusiness, setSelectedBusiness] = useState(null)
+  const [savingOutreach, setSavingOutreach] = useState(false)
+  const [outreachSaved,  setOutreachSaved]  = useState(0)
 
   // Province scan state
   const [provinces, setProvinces] = useState([])
@@ -124,6 +128,24 @@ export default function Prospector() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url; a.download = `prospectos_${location.replace(/\s+/g, '_')}.csv`; a.click()
+  }
+
+  const saveToOutreach = async () => {
+    if (!data?.businesses?.length) return
+    setSavingOutreach(true)
+    try {
+      const res = await outreachApi.search({
+        location: location.trim(),
+        category,
+        radius_km: radius,
+        limit: data.businesses.length,
+        min_score: 0,
+      })
+      setOutreachSaved(res.saved || 0)
+      setTimeout(() => navigate('/outreach'), 1000)
+    } catch {
+      setSavingOutreach(false)
+    }
   }
 
   return (
@@ -377,6 +399,17 @@ export default function Prospector() {
             <button className="btn-secondary text-xs ml-auto" onClick={exportCSV}>
               <Download size={13} />
               Exportar CSV
+            </button>
+            <button
+              onClick={saveToOutreach}
+              disabled={savingOutreach}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 rounded-lg transition-colors font-semibold disabled:opacity-40"
+            >
+              {savingOutreach
+                ? <><Loader2 size={12} className="animate-spin" /> Guardando...</>
+                : outreachSaved > 0
+                  ? <><CheckCircle size={12} /> {outreachSaved} guardados → Outreach</>
+                  : <><Target size={12} /> Enviar a Outreach</>}
             </button>
           </div>
 

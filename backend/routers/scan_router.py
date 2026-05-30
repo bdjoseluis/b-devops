@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from services import nmap_service, kali_service, shodan_service
+from services.rate_limiter import scan_limiter
 
-router = APIRouter(prefix="/api/scan", tags=["scan"])
+router = APIRouter(prefix="/api/scan", tags=["scan"], dependencies=[Depends(scan_limiter)])
 
 
 class ScanRequest(BaseModel):

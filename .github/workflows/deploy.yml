@@ -34,11 +34,12 @@ jobs:
           }
           Write-Host "Archivos modificados: $($changed.Count)"
 
-          $rebuildBackend   = @($changed | Where-Object { $_ -like "backend/*" })
-          $rebuildFrontend  = @($changed | Where-Object { $_ -like "frontend/*" })
-          $rebuildCompose   = @($changed | Where-Object { $_ -eq "docker-compose.yml" })
-          $restartGrafana   = @($changed | Where-Object { $_ -like "infra/grafana/*" })
-          $restartPrometheus= @($changed | Where-Object { $_ -like "infra/prometheus/*" })
+          $rebuildBackend    = @($changed | Where-Object { $_ -like "backend/*" })
+          $rebuildFrontend   = @($changed | Where-Object { $_ -like "frontend/*" })
+          $rebuildCompose    = @($changed | Where-Object { $_ -eq "docker-compose.yml" })
+          $restartGrafana    = @($changed | Where-Object { $_ -like "infra/grafana/*" })
+          $restartPrometheus = @($changed | Where-Object { $_ -like "infra/prometheus/*" })
+          $restartBackup     = @($changed | Where-Object { $_ -like "infra/backup/*" })
           $rebuilt = $false
 
           if ($rebuildCompose.Count -gt 0) {
@@ -65,6 +66,11 @@ jobs:
             if ($restartPrometheus.Count -gt 0) {
               Write-Host "Configuracion Prometheus cambiada - recargando bdev-prometheus..."
               docker compose restart bdev-prometheus
+              $rebuilt = $true
+            }
+            if ($restartBackup.Count -gt 0) {
+              Write-Host "Script de backup cambiado - reiniciando bdev-pgbackup..."
+              docker compose restart bdev-pgbackup
               $rebuilt = $true
             }
           }

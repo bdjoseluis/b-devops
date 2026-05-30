@@ -1,8 +1,8 @@
-﻿from fastapi import APIRouter
-from pydantic import BaseModel
+﻿from fastapi import APIRouter, Depends
 from config_manager import load_config, save_config
 from pathlib import Path
 from datetime import datetime
+from routers.auth_router import admin_required
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -19,7 +19,8 @@ async def get_settings():
 
 
 @router.get("/raw")
-async def get_settings_raw():
+async def get_settings_raw(user=Depends(admin_required)):
+    """Devuelve config completa sin máscara — solo admin."""
     return load_config()
 
 

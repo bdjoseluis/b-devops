@@ -8,6 +8,7 @@ import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from routers import (
     osint_router, scan_router, ai_router, report_router,
@@ -89,6 +90,10 @@ app.include_router(integrations_router.router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "B-DEVOPS", "version": "2.0.0"}
+
+
+# Exponer métricas de Prometheus en /metrics
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 if __name__ == "__main__":

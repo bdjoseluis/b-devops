@@ -1,0 +1,107 @@
+{
+  "name": "B-DEVOPS: Grafana Alerts → Notion + Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "grafana-alert",
+        "options": {}
+      },
+      "id": "webhook-grafana",
+      "name": "Webhook: Grafana Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "grafana-alert"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.status }}",
+              "rightValue": "firing",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "if-firing",
+      "name": "¿Es alerta activa?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "37089d8c-ad66-8175-85b0-c907ce9c3a89",
+          "mode": "id"
+        },
+        "title": "={{ '🚨 ALERTA: ' + ($json.body.alerts[0].labels.alertname || 'Sistema') }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Estado",
+              "type": "select",
+              "selectValue": "Prospecto"
+            },
+            {
+              "key": "Notas",
+              "type": "richText",
+              "textContent": "={{ 'Servicio: ' + ($json.body.alerts[0].labels.service || 'N/A') + '\\nSeveridad: ' + ($json.body.alerts[0].labels.severity || 'N/A') + '\\n\\n' + ($json.body.alerts[0].annotations.description || $json.body.alerts[0].annotations.summary || '') + '\\n\\nFecha: ' + $now.toISO() }}"
+            },
+            {
+              "key": "Fuente",
+              "type": "richText",
+              "textContent": "grafana-alert"
+            }
+          ]
+        }
+      },
+      "id": "notion-alert",
+      "name": "Notion: Registrar Alerta",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [720, 200],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"received\": \"alert\" }"
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 420]
+    }
+  ],
+  "connections": {
+    "Webhook: Grafana Alert": {
+      "main": [[{ "node": "¿Es alerta activa?", "type": "main", "index": 0 }]]
+    },
+    "¿Es alerta activa?": {
+      "main": [
+        [{ "node": "Notion: Registrar Alerta", "type": "main", "index": 0 }],
+        [{ "node": "Respond OK", "type": "main", "index": 0 }]
+      ]
+    },
+    "Notion: Registrar Alerta": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "B-DEVOPS" }, { "name": "Alertas" }]
+}

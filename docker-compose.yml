@@ -333,6 +333,7 @@ services:
       - --web.enable-lifecycle
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     networks:
       - frontend-net
@@ -373,6 +374,29 @@ services:
       - "traefik.http.routers.grafana.priority=10"
       - "traefik.http.services.grafana-svc.loadbalancer.server.port=3000"
       - "com.centurylinklabs.watchtower.enable=true"
+
+  # ── bdev-pgbackup — Backup diario PostgreSQL ────────────────────────────────
+  bdev-pgbackup:
+    image: postgres:16-alpine
+    container_name: bdev-pgbackup
+    restart: unless-stopped
+    environment:
+      PGHOST: bdev-postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - pgbackup_data:/backups
+      - ./infra/backup/backup.sh:/backup.sh:ro
+      - ./infra/backup/crontab:/etc/crontabs/root:ro
+    entrypoint: ["/bin/sh", "-c", "cp /backup.sh /tmp/backup.sh && chmod +x /tmp/backup.sh && /tmp/backup.sh && crond -f -l 6"]
+    depends_on:
+      bdev-postgres:
+        condition: service_healthy
+    networks:
+      - backend-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   # ── bdev-wireguard — VPN Admin (WireGuard via wg-easy) ─────────────────────
   # Acceso admin: n8n UI, API settings, PostgreSQL, ClickHouse
@@ -482,6 +506,8 @@ services:
 # ═══════════════════════════════════════════════════════════════════════════════
 volumes:
   postgres_data:
+    driver: local
+  pgbackup_data:
     driver: local
   clickhouse_data:
     driver: local

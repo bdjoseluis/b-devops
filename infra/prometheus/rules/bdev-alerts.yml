@@ -1,0 +1,89 @@
+groups:
+  - name: bdev-infra
+    interval: 30s
+    rules:
+
+      # ── CPU alta sostenida ────────────────────────────────────────────────
+      - alert: HostCpuHigh
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: "CPU > 85% durante 5 minutos"
+          description: "CPU actual: {{ $value | printf \"%.1f\" }}%"
+
+      # ── RAM casi llena ────────────────────────────────────────────────────
+      - alert: HostMemoryHigh
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: "RAM > 90% durante 5 minutos"
+          description: "RAM usada: {{ $value | printf \"%.1f\" }}%"
+
+      # ── Disco casi lleno ──────────────────────────────────────────────────
+      - alert: HostDiskAlmostFull
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: "Disco raíz > 85% de uso"
+          description: "Disco usado: {{ $value | printf \"%.1f\" }}%"
+
+  - name: bdev-containers
+    interval: 30s
+    rules:
+
+      # ── Contenedor caído ──────────────────────────────────────────────────
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name=~"bdev-(backend|frontend|postgres|n8n|traefik)"})
+        for: 2m
+        labels:
+          severity: critical
+          service: docker
+        annotations:
+          summary: "Contenedor crítico caído"
+          description: "El contenedor {{ $labels.name }} lleva más de 2 minutos sin responder"
+
+      # ── Backend caído ─────────────────────────────────────────────────────
+      - alert: BackendDown
+        expr: absent(container_last_seen{name="bdev-backend"})
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "bdev-backend caído"
+          description: "La API FastAPI no responde"
+
+      # ── PostgreSQL caído ──────────────────────────────────────────────────
+      - alert: PostgresDown
+        expr: absent(container_last_seen{name="bdev-postgres"})
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "bdev-postgres caído"
+          description: "Base de datos PostgreSQL no responde"
+
+  - name: bdev-traefik
+    interval: 30s
+    rules:
+
+      # ── Tasa de errores alta ──────────────────────────────────────────────
+      - alert: TraefikHighErrorRate
+        expr: sum(rate(traefik_http_requests_total{code=~"5.."}[5m])) / sum(rate(traefik_http_requests_total[5m])) * 100 > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: traefik
+        annotations:
+          summary: "Más del 10% de requests con error 5xx"
+          description: "Error rate: {{ $value | printf \"%.1f\" }}%"

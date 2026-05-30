@@ -86,6 +86,7 @@ import ToolMetasploit   from './pages/ToolMetasploit'
 import ToolJWT          from './pages/ToolJWT'
 import ToolCVSS         from './pages/ToolCVSS'
 import ToolWhatsApp     from './pages/ToolWhatsApp'
+import ToolProposal     from './pages/ToolProposal'
 import Leads            from './pages/Leads'
 import Outreach         from './pages/Outreach'
 
@@ -197,6 +198,7 @@ export default function App() {
             <Route path="/tool/jwt"           element={<ToolJWT />} />
             <Route path="/tool/cvss"          element={<ToolCVSS />} />
             <Route path="/tool/whatsapp"      element={<ToolWhatsApp />} />
+            <Route path="/tool/proposal"      element={<ToolProposal />} />
           </Routes>
         </main>
       </div>

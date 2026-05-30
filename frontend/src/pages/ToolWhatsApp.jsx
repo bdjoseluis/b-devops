@@ -123,7 +123,7 @@ export default function ToolWhatsApp() {
   const [msg2,   setMsg2]   = useState('Hola, ¿en qué puedo ayudarte?')
 
   return (
-    <ToolShell title="WhatsApp Business" icon="💬" color={COLOR} description="Genera links, botones flotantes y webhooks para integrar WhatsApp en tu negocio">
+    <ToolShell name="WhatsApp Business" icon="💬" color={COLOR} badge="Links · Botón flotante · Webhook n8n">
 
       {/* Tabs */}
       <div className="flex gap-1 bg-dark-400 p-1 rounded-xl border border-surface-border w-fit mb-6">

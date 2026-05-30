@@ -84,6 +84,7 @@ const STARS = [
   { id:'explorador', zone:'mgmt',     label:'Explorador Docs',    icon:'📂', color:'#8b5cf6', x:1380, y:380,  r:9,  route:'/explorador',                       info:'Explorador de documentos y archivos' },
   { id:'prospector', zone:'mgmt',     label:'Prospector',         icon:'🏢', color:'#a78bfa', x:1770, y:400,  r:9,  route:'/prospector',                       info:'Prospección de negocios y contactos' },
   { id:'outreach',   zone:'mgmt',     label:'Outreach Engine',    icon:'🎯', color:'#22c55e', x:1680, y:300,  r:11, route:'/outreach',                          info:'Descubre empresas → genera email IA → convierte clientes' },
+  { id:'whatsapp',   zone:'mgmt',     label:'WhatsApp Business',  icon:'💬', color:'#25d366', x:1820, y:280,  r:9,  route:'/tool/whatsapp',                     info:'Links, botones flotantes y webhooks para WhatsApp Business' },
 
   // ══ Core / Center zone ════════════════════════════════════════════════════════
   { id:'portal',     zone:'core',     label:'Portal Admin',       icon:'🌌', color:'#e63946', x:1580, y:1060, r:20, route:'/portal',                           info:'Centro de control principal — Admin Panel' },

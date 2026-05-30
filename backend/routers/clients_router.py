@@ -209,3 +209,20 @@ async def client_stats(user=Depends(auth_required)):
         stats = dict(row)
         stats["por_fuente"] = {r["fuente"]: r["cnt"] for r in fuente_rows}
         return stats
+
+
+@router.get("/search")
+async def search_clients(q: str, user=Depends(auth_required)):
+    """Quick search clients by name, email or company."""
+    if not q or len(q) < 2:
+        return {"clients": []}
+    term = f"%{q.lower()}%"
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """SELECT id, nombre, empresa, email, telefono, estado, fuente
+               FROM clients
+               WHERE LOWER(nombre) LIKE $1 OR LOWER(empresa) LIKE $1 OR LOWER(email) LIKE $1
+               ORDER BY ultima_actividad DESC LIMIT 10""",
+            term,
+        )
+    return {"clients": [dict(r) for r in rows]}

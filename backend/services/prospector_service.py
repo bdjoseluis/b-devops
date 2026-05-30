@@ -3,6 +3,7 @@ import asyncio
 import ssl
 import socket
 from config_manager import get_api_key
+from services import email_scraper_service
 
 """
 Business Prospector — finds local businesses and evaluates their digital presence.
@@ -333,6 +334,16 @@ async def _check_business_online(business: dict) -> dict:
         else:
             label = "✅ Bien establecidos"
 
+        # Extract email from website if not already known
+        if not business.get("email"):
+            try:
+                scraped = await email_scraper_service.scrape_emails(website)
+                if scraped.get("best"):
+                    business["email"] = scraped["best"]
+                    business["email_source"] = scraped["source"]
+            except Exception:
+                pass
+
         business["has_website"] = True
         business["opportunity_score"] = score
         business["opportunity_label"] = label
@@ -348,6 +359,15 @@ async def _check_business_online(business: dict) -> dict:
         return business
 
     except Exception as e:
+        # Try to extract email even if the full analysis failed
+        if not business.get("email") and website:
+            try:
+                scraped = await email_scraper_service.scrape_emails(website)
+                if scraped.get("best"):
+                    business["email"] = scraped["best"]
+                    business["email_source"] = scraped["source"]
+            except Exception:
+                pass
         business["has_website"] = True
         business["opportunity_score"] = 70
         business["opportunity_label"] = "⚠️ WEB CON PROBLEMAS"

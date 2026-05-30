@@ -182,16 +182,28 @@ export const prospector = {
 }
 
 export const outreach = {
+  // Core
   search:        (body)        => api.post('/outreach/search', body, { timeout: 180000 }).then(r => r.data),
   list:          (params = {}) => api.get('/outreach', { params }).then(r => r.data),
   stats:         ()            => api.get('/outreach/stats').then(r => r.data),
   get:           (id)          => api.get(`/outreach/${id}`).then(r => r.data),
   addManual:     (body)        => api.post('/outreach/manual', body).then(r => r.data),
+  update:        (id, body)    => api.put(`/outreach/${id}`, body).then(r => r.data),
+  updateStatus:  (id, status, notes) => api.put(`/outreach/${id}/status`, { status, notes }).then(r => r.data),
+  remove:        (id)          => api.delete(`/outreach/${id}`).then(r => r.data),
+  // Email
   generateEmail: (id)          => api.post(`/outreach/${id}/generate-email`, {}, { timeout: 60000 }).then(r => r.data),
   send:          (id, to)      => api.post(`/outreach/${id}/send`, { to_email: to }).then(r => r.data),
-  updateStatus:  (id, status, notes) => api.put(`/outreach/${id}/status`, { status, notes }).then(r => r.data),
-  update:        (id, body)    => api.put(`/outreach/${id}`, body).then(r => r.data),
-  remove:        (id)          => api.delete(`/outreach/${id}`).then(r => r.data),
+  findEmail:     (id)          => api.post(`/outreach/${id}/find-email`, {}, { timeout: 30000 }).then(r => r.data),
+  // Bulk ops
+  bulkFindEmails:  ()          => api.post('/outreach/bulk/find-emails', {}, { timeout: 300000 }).then(r => r.data),
+  bulkGenerate:    (body = {}) => api.post('/outreach/bulk/generate', body, { timeout: 300000 }).then(r => r.data),
+  bulkSend:        (body = {}) => api.post('/outreach/bulk/send', body, { timeout: 600000 }).then(r => r.data),
+  // Follow-up
+  setFollowUp:     (id, date)  => api.post(`/outreach/${id}/follow-up`, { follow_up_at: date }).then(r => r.data),
+  pendingFollowUps:()          => api.get('/outreach/follow-ups/pending').then(r => r.data),
+  // Export
+  exportCsvUrl:    (status)    => `/api/outreach/export/csv${status ? `?status=${status}` : ''}`,
 }
 
 export default api

@@ -16,10 +16,13 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 
+from fastapi.responses import StreamingResponse
+import csv
+import io
 from routers.auth_router import auth_required, admin_required
 from db import get_conn
 import asyncpg
-from services import prospector_service, smtp_service
+from services import prospector_service, smtp_service, email_scraper_service
 from config_manager import load_config, get_api_key
 
 router = APIRouter(prefix="/api/outreach", tags=["outreach"], dependencies=[Depends(auth_required)])
@@ -57,6 +60,7 @@ async def ensure_outreach_table():
                 id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
                 name              TEXT NOT NULL,
                 email             TEXT DEFAULT '',
+                email_source      TEXT DEFAULT '',
                 phone             TEXT DEFAULT '',
                 website           TEXT DEFAULT '',
                 address           TEXT DEFAULT '',
@@ -70,10 +74,17 @@ async def ensure_outreach_table():
                 generated_subject TEXT DEFAULT '',
                 generated_email   TEXT DEFAULT '',
                 sent_at           TIMESTAMPTZ,
+                follow_up_at      TIMESTAMPTZ,
                 notes             TEXT DEFAULT '',
                 created_at        TIMESTAMPTZ DEFAULT NOW()
             )
         """)
+        # Add new columns if they don't exist (for existing installs)
+        for col_sql in [
+            "ALTER TABLE outreach ADD COLUMN IF NOT EXISTS email_source TEXT DEFAULT ''",
+            "ALTER TABLE outreach ADD COLUMN IF NOT EXISTS follow_up_at TIMESTAMPTZ",
+        ]:
+            await conn.execute(col_sql)
         await conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_outreach_status ON outreach (status)"
         )
@@ -117,7 +128,18 @@ class UpdateStatusBody(BaseModel):
     notes: Optional[str] = None
 
 class SendBody(BaseModel):
-    to_email: str                 # can override the stored email
+    to_email: str
+
+class BulkGenerateBody(BaseModel):
+    ids: list[str] = []           # empty = all discovered leads
+    status_filter: str = "discovered"
+
+class BulkSendBody(BaseModel):
+    ids: list[str] = []           # empty = all email_generated leads
+    delay_seconds: float = 10.0   # wait between sends
+
+class FollowUpBody(BaseModel):
+    follow_up_at: str             # ISO date string
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -482,3 +504,306 @@ async def delete_lead(lead_id: str):
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Lead no encontrado")
     return {"status": "deleted"}
+
+
+# ── Email enrichment ──────────────────────────────────────────────────────────
+
+@router.post("/{lead_id}/find-email")
+async def find_email(lead_id: str):
+    """Scrape website + Hunter.io to find a contact email for this lead."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow("SELECT * FROM outreach WHERE id=$1", lead_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Lead no encontrado")
+        lead = _row(row)
+
+    website = lead.get("website", "")
+    if not website:
+        raise HTTPException(status_code=400, detail="Sin web — añádela primero")
+
+    result = await email_scraper_service.scrape_emails(website)
+    best   = result.get("best")
+
+    if best:
+        async with get_conn() as conn:
+            await conn.execute(
+                "UPDATE outreach SET email=$1, email_source=$2 WHERE id=$3",
+                best, result.get("source", "scraper"), lead_id,
+            )
+
+    return {
+        "found": bool(best),
+        "email": best,
+        "all_emails": result.get("emails", []),
+        "source": result.get("source", "none"),
+    }
+
+
+@router.post("/bulk/find-emails")
+async def bulk_find_emails():
+    """Find emails for all leads with website but no email (max 30 at once)."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """SELECT id, website FROM outreach
+               WHERE (email='' OR email IS NULL) AND website != ''
+               ORDER BY opportunity_score DESC LIMIT 30"""
+        )
+
+    results = {"found": 0, "failed": 0, "details": []}
+    for row in rows:
+        try:
+            scraped = await email_scraper_service.scrape_emails(row["website"])
+            best = scraped.get("best")
+            if best:
+                async with get_conn() as conn:
+                    await conn.execute(
+                        "UPDATE outreach SET email=$1, email_source=$2 WHERE id=$3",
+                        best, scraped.get("source", "scraper"), row["id"],
+                    )
+                results["found"] += 1
+                results["details"].append({"id": row["id"], "email": best, "source": scraped["source"]})
+            else:
+                results["failed"] += 1
+        except Exception:
+            results["failed"] += 1
+        await asyncio.sleep(0.5)
+
+    return results
+
+
+# ── Bulk generate emails ──────────────────────────────────────────────────────
+
+@router.post("/bulk/generate")
+async def bulk_generate_emails(body: BulkGenerateBody):
+    """Generate personalized emails for multiple leads via Gemini."""
+    async with get_conn() as conn:
+        if body.ids:
+            placeholders = ",".join(f"${i+1}" for i in range(len(body.ids)))
+            rows = await conn.fetch(
+                f"SELECT * FROM outreach WHERE id IN ({placeholders})",
+                *body.ids,
+            )
+        else:
+            rows = await conn.fetch(
+                "SELECT * FROM outreach WHERE status=$1 ORDER BY opportunity_score DESC LIMIT 20",
+                body.status_filter,
+            )
+
+    if not rows:
+        return {"generated": 0, "failed": 0, "leads": []}
+
+    gemini_key = get_api_key("gemini")
+    if not gemini_key:
+        raise HTTPException(status_code=503, detail="Gemini API key no configurada")
+
+    cfg            = load_config()
+    auditor        = cfg.get("auditor", {})
+    sender_name    = auditor.get("name", "B-DEVOPS")
+    sender_company = auditor.get("company", "B-DEVOPS")
+    sender_email   = cfg.get("smtp", {}).get("email", "")
+
+    import google.generativeai as genai
+    genai.configure(api_key=gemini_key)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    results = {"generated": 0, "failed": 0, "leads": []}
+
+    for row in rows:
+        lead = _row(row)
+        try:
+            issues     = lead.get("web_issues") or []
+            tech_stack = lead.get("tech_stack") or []
+            if isinstance(issues, str):
+                try: issues = json.loads(issues)
+                except: issues = []
+            if isinstance(tech_stack, str):
+                try: tech_stack = json.loads(tech_stack)
+                except: tech_stack = []
+
+            has_web = bool(lead.get("website"))
+            if not has_web:
+                web_context = "No tienen web propia."
+            elif issues:
+                web_context = f"Problemas detectados: {', '.join(issues)}."
+                if tech_stack:
+                    web_context += f" Tech: {', '.join(tech_stack)}."
+            else:
+                web_context = f"Tienen web. Tech: {', '.join(tech_stack) if tech_stack else 'no detectada'}."
+
+            prompt = (
+                f'Escribe un email de ventas B2B en espanol para "{lead["name"]}" ({lead.get("sector","empresa")}).\n'
+                f"Contexto: Web: {lead.get('website') or 'no tienen'} | {web_context} | Score: {lead.get('opportunity_score',0)}/100\n"
+                f"Remitente: {sender_name} de {sender_company} | Servicios: automatizacion, webs, CRM, chatbots, SEO | Email: {sender_email}\n"
+                "Requisitos: asunto corto y especifico, cuerpo 4-5 parrafos, menciona SU problema concreto, CTA rapido, tono cercano.\n"
+                "Formato:\nASUNTO: <asunto>\n---\n<cuerpo>"
+            )
+
+            response = await model.generate_content_async(prompt)
+            text = response.text.strip()
+            subject = ""
+            body_text = text
+            if text.startswith("ASUNTO:"):
+                lines = text.split("\n", 1)
+                subject = lines[0].replace("ASUNTO:", "").strip()
+                body_text = lines[1].lstrip("-\n ") if len(lines) > 1 else ""
+
+            async with get_conn() as conn:
+                await conn.execute(
+                    "UPDATE outreach SET generated_subject=$1, generated_email=$2, status='email_generated' WHERE id=$3",
+                    subject, body_text, lead["id"],
+                )
+
+            results["generated"] += 1
+            results["leads"].append({"id": lead["id"], "name": lead["name"], "subject": subject})
+            await asyncio.sleep(0.8)
+        except Exception as e:
+            results["failed"] += 1
+            results["leads"].append({"id": lead["id"], "name": lead["name"], "error": str(e)})
+
+    return results
+
+
+# ── Bulk send ─────────────────────────────────────────────────────────────────
+
+@router.post("/bulk/send")
+async def bulk_send(body: BulkSendBody):
+    """Send all email_generated leads with a valid email. Respects daily limit."""
+    async with get_conn() as conn:
+        if body.ids:
+            placeholders = ",".join(f"${i+1}" for i in range(len(body.ids)))
+            rows = await conn.fetch(
+                f"SELECT * FROM outreach WHERE id IN ({placeholders}) AND status='email_generated' AND email != ''",
+                *body.ids,
+            )
+        else:
+            rows = await conn.fetch(
+                "SELECT * FROM outreach WHERE status='email_generated' AND email != '' ORDER BY opportunity_score DESC"
+            )
+
+    results = {"sent": 0, "failed": 0, "skipped": 0, "details": []}
+
+    for row in rows:
+        today = str(date.today())
+        if _sent_today.get(today, 0) >= DAILY_LIMIT:
+            results["skipped"] += 1
+            continue
+
+        lead = _row(row)
+        try:
+            send_result = await smtp_service.send_report_email(
+                to_email=lead["email"],
+                subject=lead.get("generated_subject", "Propuesta de colaboracion"),
+                body_text=lead.get("generated_email", ""),
+            )
+            if send_result.get("status") == "error":
+                results["failed"] += 1
+                results["details"].append({"id": lead["id"], "name": lead["name"], "error": send_result.get("message")})
+            else:
+                _increment_daily()
+                async with get_conn() as conn:
+                    await conn.execute(
+                        "UPDATE outreach SET status='sent', sent_at=NOW() WHERE id=$1", lead["id"]
+                    )
+                results["sent"] += 1
+                results["details"].append({"id": lead["id"], "name": lead["name"], "to": lead["email"]})
+
+            delay = min(max(body.delay_seconds, 5.0), 120.0)
+            await asyncio.sleep(delay)
+        except Exception as e:
+            results["failed"] += 1
+            results["details"].append({"id": lead["id"], "name": lead["name"], "error": str(e)})
+
+    results["sent_today"] = _sent_today.get(str(date.today()), 0)
+    results["daily_limit"] = DAILY_LIMIT
+    return results
+
+
+# ── Follow-up ─────────────────────────────────────────────────────────────────
+
+@router.post("/{lead_id}/follow-up")
+async def set_follow_up(lead_id: str, body: FollowUpBody):
+    """Set a follow-up reminder date."""
+    try:
+        from datetime import datetime as dt
+        follow_up = dt.fromisoformat(body.follow_up_at)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Fecha invalida. Usa formato ISO: 2026-06-15")
+
+    async with get_conn() as conn:
+        await conn.execute("UPDATE outreach SET follow_up_at=$1 WHERE id=$2", follow_up, lead_id)
+        row = await conn.fetchrow("SELECT * FROM outreach WHERE id=$1", lead_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Lead no encontrado")
+    return _row(row)
+
+
+@router.get("/follow-ups/pending")
+async def pending_follow_ups():
+    """Leads with follow-up dates that are due today or overdue."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """SELECT * FROM outreach
+               WHERE follow_up_at IS NOT NULL AND follow_up_at <= NOW()
+               AND status NOT IN ('converted','discarded')
+               ORDER BY follow_up_at ASC"""
+        )
+    return {"leads": [_row(r) for r in rows], "total": len(rows)}
+
+
+# ── CSV Export ────────────────────────────────────────────────────────────────
+
+@router.get("/export/csv")
+async def export_csv(status: Optional[str] = None):
+    """Export outreach leads to CSV file."""
+    async with get_conn() as conn:
+        if status:
+            rows = await conn.fetch(
+                "SELECT * FROM outreach WHERE status=$1 ORDER BY opportunity_score DESC", status
+            )
+        else:
+            rows = await conn.fetch("SELECT * FROM outreach ORDER BY opportunity_score DESC")
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "nombre", "email", "fuente_email", "telefono", "web", "direccion",
+        "sector", "score", "oportunidad", "problemas_web", "estado",
+        "asunto_email", "email_enviado", "fecha_envio", "follow_up", "notas", "creado",
+    ])
+
+    for r in rows:
+        issues_raw = r["web_issues"]
+        if isinstance(issues_raw, list):
+            issues_str = "; ".join(issues_raw)
+        elif isinstance(issues_raw, str):
+            try: issues_str = "; ".join(json.loads(issues_raw))
+            except: issues_str = issues_raw
+        else:
+            issues_str = ""
+
+        writer.writerow([
+            r["name"],
+            r["email"],
+            r.get("email_source", ""),
+            r["phone"],
+            r["website"],
+            r["address"],
+            r["sector"],
+            r["opportunity_score"],
+            r["opportunity_label"],
+            issues_str,
+            r["status"],
+            r["generated_subject"],
+            "Si" if r["status"] in ("sent", "replied", "converted") else "No",
+            r["sent_at"].isoformat() if r.get("sent_at") else "",
+            r["follow_up_at"].isoformat() if r.get("follow_up_at") else "",
+            r["notes"],
+            r["created_at"].isoformat() if r.get("created_at") else "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=outreach_leads.csv"},
+    )

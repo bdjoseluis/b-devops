@@ -1,7 +1,7 @@
 ﻿import { useLocation, useNavigate } from 'react-router-dom'
-import { Clock, ArrowLeft, LogOut, Bell } from 'lucide-react'
+import { Clock, ArrowLeft, LogOut, Bell, BellRing } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { health, auth as authApi } from '../api/client'
+import { health, auth as authApi, outreach as outreachApi } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
 const PAGE_TITLES = {
@@ -37,10 +37,11 @@ export default function TopBar() {
   const location  = useLocation()
   const navigate  = useNavigate()
   const { logout, role, isAdmin } = useAuth()
-  const [time,         setTime]        = useState(new Date())
-  const [connected,    setConnected]   = useState(false)
-  const [pulse,        setPulse]       = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
+  const [time,           setTime]          = useState(new Date())
+  const [connected,      setConnected]     = useState(false)
+  const [pulse,          setPulse]         = useState(false)
+  const [pendingCount,   setPendingCount]  = useState(0)
+  const [followUpCount,  setFollowUpCount] = useState(0)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,18 +61,21 @@ export default function TopBar() {
     return () => clearInterval(interval)
   }, [])
 
-  // Check for pending users — only for admins, every 60s
+  // Check pending users + follow-ups — only for admins, every 60s
   useEffect(() => {
     if (!isAdmin) return
-    const checkPending = async () => {
+    const checkAll = async () => {
       try {
         const data = await authApi.listUsers()
-        const n = (data.users || []).filter(u => u.status === 'pending').length
-        setPendingCount(n)
+        setPendingCount((data.users || []).filter(u => u.status === 'pending').length)
+      } catch { /* ignore */ }
+      try {
+        const fu = await outreachApi.pendingFollowUps()
+        setFollowUpCount(fu.total || 0)
       } catch { /* ignore */ }
     }
-    checkPending()
-    const interval = setInterval(checkPending, 60000)
+    checkAll()
+    const interval = setInterval(checkAll, 60000)
     return () => clearInterval(interval)
   }, [isAdmin])
 
@@ -142,6 +146,21 @@ export default function TopBar() {
         <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, fontFamily: 'monospace' }}>
           {time.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
+
+        {/* Follow-up reminders (admin only) */}
+        {isAdmin && followUpCount > 0 && (
+          <button
+            onClick={() => navigate('/outreach')}
+            title={`${followUpCount} follow-up${followUpCount > 1 ? 's' : ''} pendiente${followUpCount > 1 ? 's' : ''}`}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 8, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', color: '#fb923c', cursor: 'pointer', fontSize: 11, fontFamily: 'Inter, sans-serif', transition: 'all .18s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(249,115,22,0.22)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(249,115,22,0.12)' }}
+          >
+            <BellRing size={11} />
+            <span style={{ fontWeight: 700 }}>{followUpCount}</span>
+            <span style={{ fontSize: 10 }}>follow-up{followUpCount > 1 ? 's' : ''}</span>
+          </button>
+        )}
 
         {/* Pending users notification (admin only) */}
         {isAdmin && pendingCount > 0 && (

@@ -1,0 +1,97 @@
+{
+  "name": "B-DEVOPS: Lead Intake -> Notion CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "options": {}
+      },
+      "id": "webhook-lead",
+      "name": "Webhook: Lead Received",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "lead-intake"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "37089d8c-ad66-8175-85b0-c907ce9c3a89",
+          "mode": "id"
+        },
+        "title": "={{ $json.body.client.nombre }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Email",
+              "type": "email",
+              "emailValue": "={{ $json.body.client.email || '' }}"
+            },
+            {
+              "key": "Telefono",
+              "type": "phoneNumber",
+              "phoneValue": "={{ $json.body.client.telefono || '' }}"
+            },
+            {
+              "key": "Estado",
+              "type": "select",
+              "selectValue": "Prospecto"
+            },
+            {
+              "key": "Sector",
+              "type": "select",
+              "selectValue": "={{ $json.body.client.sector || 'Otro' }}"
+            },
+            {
+              "key": "Notas",
+              "type": "richText",
+              "textContent": "={{ $json.body.client.notas || '' }}"
+            },
+            {
+              "key": "Fuente",
+              "type": "richText",
+              "textContent": "={{ $json.body.fuente || 'otro' }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-create-lead",
+      "name": "Notion: Crear Lead",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [500, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"synced\": \"notion\" }"
+      },
+      "id": "respond-lead",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [760, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Lead Received": {
+      "main": [[{ "node": "Notion: Crear Lead", "type": "main", "index": 0 }]]
+    },
+    "Notion: Crear Lead": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "B-DEVOPS" }, { "name": "Integraciones" }]
+}

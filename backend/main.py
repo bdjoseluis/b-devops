@@ -18,6 +18,7 @@ from routers import devops_router
 from routers import auth_router
 from routers import monitor_router
 from routers import clients_router
+from routers import integrations_router
 
 
 @asynccontextmanager
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
     # Crear tablas en BD al arrancar
     await auth_router.ensure_users_table()
     await clients_router.ensure_clients_table()
+    await integrations_router.ensure_fuente_column()
     yield
 
 
@@ -40,10 +42,16 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
+        "http://localhost:4200",
         "http://127.0.0.1:5173",
         "https://app.bdev.qzz.io",
         "https://bdev.qzz.io",
         "https://api.bdev.qzz.io",
+        "https://carsimport.bdev.qzz.io",
+        "https://carsimport.vercel.app",
+        "https://psicologia.bdev.qzz.io",
+        "https://devesan.vercel.app",
+        "https://www.claraeugenia.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -63,6 +71,7 @@ app.include_router(devops_router.router)
 app.include_router(auth_router.router)
 app.include_router(monitor_router.router)
 app.include_router(clients_router.router)
+app.include_router(integrations_router.router)
 
 
 @app.get("/api/health")

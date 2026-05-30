@@ -181,4 +181,17 @@ export const prospector = {
     api.get('/prospector/provinces').then(r => r.data),
 }
 
+export const outreach = {
+  search:        (body)        => api.post('/outreach/search', body, { timeout: 180000 }).then(r => r.data),
+  list:          (params = {}) => api.get('/outreach', { params }).then(r => r.data),
+  stats:         ()            => api.get('/outreach/stats').then(r => r.data),
+  get:           (id)          => api.get(`/outreach/${id}`).then(r => r.data),
+  addManual:     (body)        => api.post('/outreach/manual', body).then(r => r.data),
+  generateEmail: (id)          => api.post(`/outreach/${id}/generate-email`, {}, { timeout: 60000 }).then(r => r.data),
+  send:          (id, to)      => api.post(`/outreach/${id}/send`, { to_email: to }).then(r => r.data),
+  updateStatus:  (id, status, notes) => api.put(`/outreach/${id}/status`, { status, notes }).then(r => r.data),
+  update:        (id, body)    => api.put(`/outreach/${id}`, body).then(r => r.data),
+  remove:        (id)          => api.delete(`/outreach/${id}`).then(r => r.data),
+}
+
 export default api

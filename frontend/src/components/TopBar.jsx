@@ -30,6 +30,7 @@ const PAGE_TITLES = {
   '/n8n':          { title: 'n8n Workflows',                icon: '🔗' },
   '/servicios':    { title: 'Servicios & Automatización',   icon: '✨' },
   '/leads':        { title: 'Leads Externos',               icon: '📥' },
+  '/outreach':     { title: 'Outreach Engine',              icon: '🎯' },
 }
 
 export default function TopBar() {

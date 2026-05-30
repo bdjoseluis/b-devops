@@ -24,6 +24,7 @@ const QUICK = [
   { icon:'🔒', label:'SSL Check',          to:'/tool/sslcheck',     color:'#10b981' },
   { icon:'📥', label:'Leads',              to:'/leads',             color:'#10b981' },
   { icon:'👥', label:'CRM',                to:'/clientes',          color:'#a855f7' },
+  { icon:'🎯', label:'Outreach',           to:'/outreach',          color:'#22c55e' },
 ]
 
 // ── Tool zones summary ────────────────────────────────────────────────────────

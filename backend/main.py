@@ -20,6 +20,7 @@ from routers import auth_router
 from routers import monitor_router
 from routers import clients_router
 from routers import integrations_router
+from routers import outreach_router
 
 DB_URL = os.environ.get("DATABASE_URL", "")
 
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
     await auth_router.ensure_users_table()
     await clients_router.ensure_clients_table()
     await integrations_router.ensure_fuente_column()
+    await outreach_router.ensure_outreach_table()
     yield
 
     await _db.close_pool()
@@ -79,6 +81,7 @@ app.include_router(auth_router.router)
 app.include_router(monitor_router.router)
 app.include_router(clients_router.router)
 app.include_router(integrations_router.router)
+app.include_router(outreach_router.router)
 
 
 @app.get("/api/health")

@@ -83,6 +83,7 @@ const STARS = [
   { id:'leads',      zone:'mgmt',     label:'Leads Externos',     icon:'📥', color:'#10b981', x:1480, y:380,  r:10, route:'/leads',                             info:'Leads recibidos de carsimport, psicología y bolsos-clari' },
   { id:'explorador', zone:'mgmt',     label:'Explorador Docs',    icon:'📂', color:'#8b5cf6', x:1380, y:380,  r:9,  route:'/explorador',                       info:'Explorador de documentos y archivos' },
   { id:'prospector', zone:'mgmt',     label:'Prospector',         icon:'🏢', color:'#a78bfa', x:1770, y:400,  r:9,  route:'/prospector',                       info:'Prospección de negocios y contactos' },
+  { id:'outreach',   zone:'mgmt',     label:'Outreach Engine',    icon:'🎯', color:'#22c55e', x:1680, y:300,  r:11, route:'/outreach',                          info:'Descubre empresas → genera email IA → convierte clientes' },
 
   // ══ Core / Center zone ════════════════════════════════════════════════════════
   { id:'portal',     zone:'core',     label:'Portal Admin',       icon:'🌌', color:'#e63946', x:1580, y:1060, r:20, route:'/portal',                           info:'Centro de control principal — Admin Panel' },
@@ -169,7 +170,7 @@ const LINKS = [
   ['devops','clickhouse'],['swagger','infra'],['n8n','command'],['ipcalc','infra'],['ipcalc','bgp'],['portscan','nmap'],['portscan','ipcalc'],['cronhelper','n8n'],['cronhelper','scripts'],
   // Mgmt
   ['dashboard','clientes'],['dashboard','proyectos'],['workspace','clientes'],
-  ['monitor','dashboard'],['reportes','dashboard'],['prospector','clientes'],
+  ['monitor','dashboard'],['reportes','dashboard'],['prospector','clientes'],['outreach','clientes'],['outreach','prospector'],
   // Core connections
   ['portal','dashboard'],['portal','herram'],['portal','clientes'],
   ['herram','pivot2'],['herram','shodan'],['grc2','surface2'],

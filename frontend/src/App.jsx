@@ -86,6 +86,7 @@ import ToolMetasploit   from './pages/ToolMetasploit'
 import ToolJWT          from './pages/ToolJWT'
 import ToolCVSS         from './pages/ToolCVSS'
 import Leads            from './pages/Leads'
+import Outreach         from './pages/Outreach'
 
 // Full-screen routes: no sidebar / topbar
 const FULLSCREEN_ROUTES = ['/portal']
@@ -135,6 +136,7 @@ export default function App() {
             <Route path="/n8n"        element={<N8nHub />} />
             <Route path="/servicios"  element={<Servicios />} />
             <Route path="/leads"      element={<Leads />} />
+            <Route path="/outreach"   element={<Outreach />} />
             {/* Tool pages — fullscreen, no sidebar */}
             <Route path="/tool/censys"    element={<ToolCensys />} />
             <Route path="/tool/shodan"    element={<ToolShodan />} />

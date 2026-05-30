@@ -41,6 +41,8 @@ const STARS = [
   { id:'geoip',      zone:'osint',    label:'GeoIP Lookup',       icon:'📍', color:'#3b82f6', x:870,  y:750,  r:9,  route:'/tool/geoip',                       info:'Geolocalización IP con mapa — ciudad, ISP, timezone' },
   { id:'emailhdr',   zone:'osint',    label:'Email Headers',      icon:'✉️', color:'#f59e0b', x:990,  y:870,  r:9,  route:'/tool/emailheaders',                info:'Análisis de cabeceras email — SPF, DKIM, DMARC, phishing' },
   { id:'qrcode',     zone:'web',      label:'QR Generator',       icon:'📱', color:'#8b5cf6', x:2970, y:1730, r:9,  route:'/tool/qrcode',                      info:'Generador de QR personalizable — URL, WiFi, vCard, colores' },
+  { id:'jwt',        zone:'security', label:'JWT Debugger',        icon:'🔑', color:'#a855f7', x:2580, y:1100, r:10, route:'/tool/jwt',                          info:'Decode, encode y verifica JWT — HS256, payload, expiración' },
+  { id:'cvss',       zone:'security', label:'CVSS Calculator',    icon:'🛡️', color:'#ef4444', x:2450, y:1100, r:10, route:'/tool/cvss',                         info:'Calculadora CVSS 3.1 — score, vector string, severidad' },
 
   // ══ Security zone ════════════════════════════════════════════════════════════
   { id:'audit',      zone:'security', label:'Auto Auditoría',     icon:'🔐', color:'#e63946', x:2520, y:820,  r:15, route:'/audit',                           info:'Auditoría de seguridad automática con IA' },
@@ -65,7 +67,7 @@ const STARS = [
   { id:'command',    zone:'infra',    label:'Command Center',     icon:'⚡', color:'#22d3ee', x:1520, y:2060, r:11, route:'/command',                          info:'Centro de comandos operacional' },
   { id:'scripts',    zone:'infra',    label:'Scripts',            icon:'📝', color:'#10b981', x:1660, y:2080, r:9,  route:'/scripts',                          info:'Scripts y automatizaciones personalizadas' },
   { id:'n8n',        zone:'infra',    label:'n8n Workflows',      icon:'🔗', color:'#f97316', x:1750, y:1980, r:10, url:'https://crm.bdev.qzz.io',             info:'Automatizacion de workflows — n8n' },
-  { id:'clickhouse', zone:'infra',    label:'ClickHouse',         icon:'📊', color:'#f59e0b', x:1400, y:2000, r:8,  url:'https://app.bdev.qzz.io:8123/play',   info:'Analitica con ClickHouse' },
+  { id:'clickhouse', zone:'infra',    label:'ClickHouse',         icon:'📊', color:'#f59e0b', x:1400, y:2000, r:8,  url:'http://localhost:8123/play',          info:'Analítica con ClickHouse (red interna)' },
   { id:'swagger',    zone:'infra',    label:'API Swagger',        icon:'📚', color:'#10b981', x:1720, y:2080, r:8,  url:'https://api.bdev.qzz.io/docs',        info:'Documentacion de la API REST' },
   { id:'ipcalc',     zone:'infra',    label:'IP Calculator',      icon:'🔢', color:'#22d3ee', x:1830, y:1950, r:9,  route:'/tool/ipcalc',                      info:'Calculadora de subredes CIDR — IPv4/IPv6' },
   { id:'portscan',   zone:'infra',    label:'Port Scanner',       icon:'🔌', color:'#f97316', x:1860, y:2060, r:9,  route:'/tool/portscan',                    info:'Escáner de puertos TCP — detección de servicios' },
@@ -78,6 +80,7 @@ const STARS = [
   { id:'workspace',  zone:'mgmt',     label:'Workspace',          icon:'🗂️', color:'#7c3aed', x:1490, y:450,  r:11, route:'/workspace',                        info:'Casos de investigación y findings' },
   { id:'monitor',    zone:'mgmt',     label:'Uptime Monitor',     icon:'📡', color:'#10b981', x:1680, y:450,  r:10, route:'/monitor',                          info:'Monitoreo de uptime y SSL' },
   { id:'reportes',   zone:'mgmt',     label:'Reportes',           icon:'📋', color:'#6366f1', x:1580, y:480,  r:10, route:'/reportes',                         info:'Generación de reportes ejecutivos' },
+  { id:'leads',      zone:'mgmt',     label:'Leads Externos',     icon:'📥', color:'#10b981', x:1480, y:380,  r:10, route:'/leads',                             info:'Leads recibidos de carsimport, psicología y bolsos-clari' },
   { id:'explorador', zone:'mgmt',     label:'Explorador Docs',    icon:'📂', color:'#8b5cf6', x:1380, y:380,  r:9,  route:'/explorador',                       info:'Explorador de documentos y archivos' },
   { id:'prospector', zone:'mgmt',     label:'Prospector',         icon:'🏢', color:'#a78bfa', x:1770, y:400,  r:9,  route:'/prospector',                       info:'Prospección de negocios y contactos' },
 

@@ -539,50 +539,52 @@ function DeployGuide() {
 
   const STEPS = [
     {
-      title: 'Oracle Cloud — Crear VM gratuita',
+      title: 'Contabo VPS — Provisionar servidor',
       icon: Cloud,
-      color: 'text-red-400',
+      color: 'text-blue-400',
       content: [
-        { type: 'text', value: 'Oracle Cloud siempre-gratis: 4 ARM cores + 24 GB RAM. Perfecto para todo el stack.' },
-        { type: 'code', lang: 'txt', value: '1. Regístrate en cloud.oracle.com (necesitas tarjeta pero NO cobran)\n2. Compute → Instances → Create Instance\n3. Image: Ubuntu 22.04 Minimal\n4. Shape: VM.Standard.A1.Flex → 4 OCPUs + 24 GB RAM\n5. Network: VCN con subnet pública\n6. SSH key: sube tu clave pública\n7. Boot volume: 50 GB (gratuito)' },
-        { type: 'text', value: 'Después de crear, abre los puertos 80, 443, 6443 (K8s) en Security Lists.' },
+        { type: 'text', value: 'Contabo ofrece 4vCPU / 8GB RAM / 150GB SSD a 3.60€/mes (12 meses). Perfecto para todo el stack B-DEVOPS.' },
+        { type: 'code', lang: 'txt', value: '1. Contratar en contabo.com → VPS S\n2. Seleccionar Ubuntu 22.04 LTS\n3. Guardar IP pública y contraseña root\n4. Conectar: ssh root@TU_IP_CONTABO\n5. Crear usuario no-root:\n   adduser bdev\n   usermod -aG sudo bdev\n   rsync --archive --chown=bdev:bdev ~/.ssh /home/bdev/' },
+        { type: 'text', value: 'Alternativamente usa Hetzner (infra/terraform/ ya tiene el provider configurado): terraform apply.' },
       ]
     },
     {
-      title: 'Instalar k3s (Kubernetes ligero)',
-      icon: Box,
-      color: 'text-purple-400',
-      content: [
-        { type: 'text', value: 'k3s es Kubernetes en un solo binario, perfecto para Oracle Cloud ARM.' },
-        { type: 'code', lang: 'bash', value: '# Conectar al servidor\nssh ubuntu@TU_IP_ORACLE\n\n# Instalar k3s\ncurl -sfL https://get.k3s.io | sh -\n\n# Verificar que funciona\nsudo kubectl get nodes\n# → STATUS: Ready\n\n# Copiar kubeconfig a tu máquina local\nscp ubuntu@TU_IP:~/.kube/config ~/.kube/config-oracle\nexport KUBECONFIG=~/.kube/config-oracle' },
-      ]
-    },
-    {
-      title: 'Construir y subir imágenes Docker',
-      icon: Server,
-      color: 'text-cyan-400',
-      content: [
-        { type: 'text', value: 'Sube las imágenes a GitHub Container Registry (ghcr.io) — 100% gratuito.' },
-        { type: 'code', lang: 'bash', value: '# Login en ghcr.io (usa tu GitHub token)\necho $GITHUB_TOKEN | docker login ghcr.io -u TU_USUARIO --password-stdin\n\n# Build y push backend\ndocker build -t ghcr.io/TU_USUARIO/bdev-backend:latest ./backend\ndocker push ghcr.io/TU_USUARIO/bdev-backend:latest\n\n# Build y push frontend\ndocker build -t ghcr.io/TU_USUARIO/bdev-frontend:latest ./frontend\ndocker push ghcr.io/TU_USUARIO/bdev-frontend:latest' },
-        { type: 'text', value: 'Luego cambia YOUR_REGISTRY por ghcr.io/TU_USUARIO en los manifests de kubernetes/' },
-      ]
-    },
-    {
-      title: 'Desplegar en Kubernetes',
-      icon: Activity,
+      title: 'Ansible — Provisionar con un comando',
+      icon: Settings,
       color: 'text-green-400',
       content: [
-        { type: 'text', value: 'Instala cert-manager para SSL gratuito, luego aplica todos los manifests.' },
-        { type: 'code', lang: 'bash', value: '# 1. cert-manager (SSL gratuito con Let\'s Encrypt)\nkubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml\nkubectl wait --for=condition=ready pod -l app=cert-manager -n cert-manager --timeout=120s\n\n# 2. Edita kubernetes/07-cert-manager.yaml → pon tu email\n# 3. Edita kubernetes/06-ingress.yaml → pon tu dominio\n# 4. Edita kubernetes/04-bdev-backend.yaml → pon la imagen correcta\n\n# 5. Desplegar todo\nkubectl apply -k ./kubernetes/\n\n# 6. Ver estado\nkubectl get pods -n b-devops\nkubectl get ingress -n b-devops' },
+        { type: 'text', value: 'El playbook de Ansible instala Docker, clona el repo y levanta el stack completo automáticamente.' },
+        { type: 'code', lang: 'bash', value: '# En tu máquina local (D:\\aura-ops)\n# 1. Edita infra/ansible/hosts.yaml → pon tu IP\nnano infra/ansible/hosts.yaml\n\n# 2. Ejecutar playbook completo\nansible-playbook -i infra/ansible/hosts.yaml infra/ansible/deploy-base.yaml\n\n# El playbook hace:\n# → Instala Docker + Docker Compose\n# → Configura UFW (80, 443, 51820/UDP)\n# → Clona el repo en /opt/bdev\n# → Copia el .env\n# → docker compose up -d' },
+        { type: 'text', value: 'Si el VPS ya tiene Docker, puedes saltar al paso 3 directamente.' },
       ]
     },
     {
-      title: 'Instalar Airbyte (opcional)',
-      icon: Zap,
+      title: 'Cloudflare Tunnel — Exponer sin IP pública',
+      icon: Globe,
       color: 'text-orange-400',
       content: [
-        { type: 'text', value: 'Airbyte necesita mucha RAM (4GB+). En Oracle ARM con 24GB es factible.' },
-        { type: 'code', lang: 'bash', value: '# En tu Oracle Cloud VM\ngit clone https://github.com/airbytehq/airbyte.git\ncd airbyte\n./run-ab-platform.sh\n\n# Accede en http://TU_IP:8000\n# Usuario: airbyte / Contraseña: password\n\n# Configura connectors:\n#  Source: B-DEVOPS API (HTTP connector)\n#  Destination: ClickHouse\n#  → Los datos de auditorías fluyen automáticamente a ClickHouse' },
+        { type: 'text', value: 'Cloudflare Tunnel conecta el VPS a bdev.qzz.io sin abrir puertos. El túnel ID es: f2060fc8-5ad9-4afd-b9ce-0db3a2b5123f' },
+        { type: 'code', lang: 'bash', value: '# En el VPS\ncurl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb\ndpkg -i cloudflared.deb\n\n# Autenticar con Cloudflare\ncloudflared tunnel login\n\n# El tunnel ya está creado — solo instalar como servicio\ncloudflared service install\nsystemctl enable cloudflared\nsystemctl start cloudflared' },
+        { type: 'text', value: 'Los subdominios (app, api, crm, monitor) están configurados en Cloudflare Dashboard → Tunnels.' },
+      ]
+    },
+    {
+      title: 'Levantar el stack Docker',
+      icon: Box,
+      color: 'text-cyan-400',
+      content: [
+        { type: 'text', value: 'Con el repo clonado y el .env configurado, el stack completo levanta en un comando.' },
+        { type: 'code', lang: 'bash', value: 'cd /opt/bdev\n\n# Copiar y editar variables de entorno\ncp .env.example .env\nnano .env  # rellenar contraseñas\n\n# Levantar todo\ndocker compose up -d\n\n# Verificar que todo está corriendo\ndocker compose ps\n\n# Ver logs en tiempo real\ndocker compose logs -f bdev-backend' },
+      ]
+    },
+    {
+      title: 'CI/CD — GitHub Actions self-hosted',
+      icon: GitBranch,
+      color: 'text-purple-400',
+      content: [
+        { type: 'text', value: 'El runner de GitHub Actions se instala en el VPS. Cada push a main hace deploy automático.' },
+        { type: 'code', lang: 'bash', value: '# En el VPS — instalar runner de GitHub Actions\nmkdir -p /opt/actions-runner && cd /opt/actions-runner\n\n# Descargar (obtener URL en GitHub repo → Settings → Actions → Runners)\ncurl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz\ntar xzf ./actions-runner-linux-x64.tar.gz\n\n# Configurar (usar token de GitHub repo)\n./config.sh --url https://github.com/bdjoseluis/b-devops --token TU_TOKEN\n\n# Instalar como servicio\nsudo ./svc.sh install\nsudo ./svc.sh start' },
+        { type: 'text', value: 'A partir de aquí cada git push a main despliega automáticamente via .github/workflows/deploy.yml.' },
       ]
     },
   ]

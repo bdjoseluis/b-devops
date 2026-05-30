@@ -83,6 +83,9 @@ import ToolForense      from './pages/ToolForense'
 import ToolBlueteam     from './pages/ToolBlueteam'
 import ToolTunnels      from './pages/ToolTunnels'
 import ToolMetasploit   from './pages/ToolMetasploit'
+import ToolJWT          from './pages/ToolJWT'
+import ToolCVSS         from './pages/ToolCVSS'
+import Leads            from './pages/Leads'
 
 // Full-screen routes: no sidebar / topbar
 const FULLSCREEN_ROUTES = ['/portal']
@@ -131,6 +134,7 @@ export default function App() {
             <Route path="/workspace"  element={<Workspace />} />
             <Route path="/n8n"        element={<N8nHub />} />
             <Route path="/servicios"  element={<Servicios />} />
+            <Route path="/leads"      element={<Leads />} />
             {/* Tool pages — fullscreen, no sidebar */}
             <Route path="/tool/censys"    element={<ToolCensys />} />
             <Route path="/tool/shodan"    element={<ToolShodan />} />
@@ -187,6 +191,8 @@ export default function App() {
             <Route path="/tool/blueteam"      element={<ToolBlueteam />} />
             <Route path="/tool/tunnels"       element={<ToolTunnels />} />
             <Route path="/tool/metasploit"    element={<ToolMetasploit />} />
+            <Route path="/tool/jwt"           element={<ToolJWT />} />
+            <Route path="/tool/cvss"          element={<ToolCVSS />} />
           </Routes>
         </main>
       </div>

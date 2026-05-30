@@ -36,7 +36,7 @@ const EXTERNAL_SERVICES = [
     id: 'grafana',
     name: 'Grafana',
     url: 'https://monitor.bdev.qzz.io/grafana',
-    desc: 'Dashboards y métricas (VPN: admin / REDACTED)',
+    desc: 'Dashboards y métricas — acceso solo con VPN',
     icon: Activity,
     color: 'text-orange-400',
     bg: 'bg-orange-900/20 border-orange-700/30',

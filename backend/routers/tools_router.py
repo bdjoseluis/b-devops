@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from pydantic import BaseModel
 from services import (
     censys_service,
@@ -12,7 +13,7 @@ from services import (
     securitytrails_service,
 )
 
-router = APIRouter(prefix="/api/tools", tags=["tools"])
+router = APIRouter(prefix="/api/tools", tags=["tools"], dependencies=[Depends(auth_required)])
 
 
 # ── Censys ──────────────────────────────────────────────

@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from services import tempmail_service
 
-router = APIRouter(prefix="/api/tempmail", tags=["tempmail"])
+router = APIRouter(prefix="/api/tempmail", tags=["tempmail"], dependencies=[Depends(auth_required)])
 
 
 @router.post("/create")

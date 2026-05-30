@@ -29,6 +29,7 @@ const PAGE_TITLES = {
   '/workspace':    { title: 'Workspace',                    icon: '🗂️' },
   '/n8n':          { title: 'n8n Workflows',                icon: '🔗' },
   '/servicios':    { title: 'Servicios & Automatización',   icon: '✨' },
+  '/leads':        { title: 'Leads Externos',               icon: '📥' },
 }
 
 export default function TopBar() {

@@ -1,11 +1,12 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
+from routers.auth_router import auth_required
 from pydantic import BaseModel
 from services import report_service, gemini_service
 from config_manager import load_config
 from pathlib import Path
 
-router = APIRouter(prefix="/api/reports", tags=["reports"])
+router = APIRouter(prefix="/api/reports", tags=["reports"], dependencies=[Depends(auth_required)])
 
 
 class ReportRequest(BaseModel):

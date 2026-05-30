@@ -1,6 +1,6 @@
 ﻿import { useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { settings, devops } from '../api/client'
+import { settings, devops, clients } from '../api/client'
 import {
   Search, Zap, Terminal, Shield, FileText, Settings, TrendingUp,
   Globe, Network, AlertTriangle, Clock, ScanLine, CheckCircle,
@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [chStats,      setChStats]      = useState(null)
   const [recentAudits, setRecentAudits] = useState([])
   const [stackStatus,  setStackStatus]  = useState(null)
+  const [crmStats,     setCrmStats]     = useState(null)
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
@@ -47,8 +48,8 @@ export default function Dashboard() {
     devops.analyticsStats().then(setChStats).catch(() => {})
     devops.analyticsRecent(5).then(d => setRecentAudits(d?.audits || [])).catch(() => {})
     devops.stackStatus().then(setStackStatus).catch(() => {})
+    clients.stats().then(setCrmStats).catch(() => {})
     const t = setInterval(() => setTime(new Date()), 1000)
-    // Refresh stack status every 30s
     const st = setInterval(() => devops.stackStatus().then(setStackStatus).catch(() => {}), 30000)
     return () => { clearInterval(t); clearInterval(st) }
   }, [])
@@ -86,16 +87,20 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stat cards ────────────────────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:12, marginBottom:28 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))', gap:12, marginBottom:28 }}>
         {[
-          { icon:<Activity size={18}/>,  label:'Herramientas',    value:totalTools + '+', color:'#a855f7', glow:'rgba(168,85,247,0.2)' },
-          { icon:<Shield size={18}/>,    label:'APIs conf.',       value:`${apisConf}/${apisTotal}`, color:'#10b981', glow:'rgba(16,185,129,0.15)' },
-          { icon:<FileText size={18}/>,  label:'Informes',         value: liveStats?.reports_total ?? '—', color:'#06b6d4', glow:'rgba(6,182,212,0.15)' },
-          { icon:<Database size={18}/>,  label:'Auditorías',       value: chStats?.total ?? '—', color:'#f59e0b', glow:'rgba(245,158,11,0.15)' },
-          { icon:<Radio size={18}/>,     label:'Sistema',          value:'Online', color:'#10b981', glow:'rgba(16,185,129,0.2)' },
-          { icon:<Globe size={18}/>,     label:'Zonas mapa',       value:'7', color:'#3b82f6', glow:'rgba(59,130,246,0.15)' },
+          { icon:<Activity size={18}/>,  label:'Herramientas',    value:totalTools + '+', color:'#a855f7', glow:'rgba(168,85,247,0.2)',  to:'/herramientas' },
+          { icon:<Shield size={18}/>,    label:'APIs conf.',       value:`${apisConf}/${apisTotal}`, color:'#10b981', glow:'rgba(16,185,129,0.15)', to:'/config' },
+          { icon:<FileText size={18}/>,  label:'Informes',         value: liveStats?.reports_total ?? '—', color:'#06b6d4', glow:'rgba(6,182,212,0.15)', to:'/reportes' },
+          { icon:<Database size={18}/>,  label:'Auditorías',       value: chStats?.total ?? '—', color:'#f59e0b', glow:'rgba(245,158,11,0.15)', to:'/audit' },
+          { icon:<Users size={18}/>,     label:'Clientes activos', value: crmStats?.activos ?? '—', color:'#a855f7', glow:'rgba(168,85,247,0.15)', to:'/clientes' },
+          { icon:<TrendingUp size={18}/>,label:'Leads externos',   value: crmStats?.leads_externos ?? '—', color:'#10b981', glow:'rgba(16,185,129,0.15)', to:'/leads' },
+          { icon:<Radio size={18}/>,     label:'Sistema',          value:'Online', color:'#10b981', glow:'rgba(16,185,129,0.2)',  to:'/infra' },
+          { icon:<Globe size={18}/>,     label:'Zonas mapa',       value:'7', color:'#3b82f6', glow:'rgba(59,130,246,0.15)', to:'/' },
         ].map(s => (
-          <div key={s.label} style={{ background:`${s.glow}`, border:`1px solid ${s.color}25`, borderRadius:14, padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+          <div key={s.label} onClick={() => navigate(s.to)} style={{ background:`${s.glow}`, border:`1px solid ${s.color}25`, borderRadius:14, padding:'14px 16px', display:'flex', alignItems:'center', gap:12, cursor:'pointer', transition:'all .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor=`${s.color}55` }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor=`${s.color}25` }}>
             <div style={{ color:s.color }}>{s.icon}</div>
             <div>
               <div style={{ color:s.color, fontSize:20, fontWeight:800, fontFamily:'monospace', lineHeight:1 }}>{s.value}</div>
@@ -197,6 +202,44 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── CRM Pipeline ──────────────────────────────────────────────────────── */}
+      {crmStats && crmStats.total > 0 && (
+        <div style={{ background:'rgba(168,85,247,0.04)', border:'1px solid rgba(168,85,247,0.12)', borderRadius:14, padding:'16px 20px', marginBottom:20 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', display:'flex', alignItems:'center', gap:6 }}>
+              <Users size={12}/> CRM Pipeline
+            </div>
+            <Link to="/clientes" style={{ color:'rgba(168,85,247,0.6)', fontSize:10, textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
+              Ver CRM <ArrowRight size={10}/>
+            </Link>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(130px,1fr))', gap:12 }}>
+            {[
+              { label:'Total clientes', v: crmStats.total,          color:'#fff' },
+              { label:'Activos',        v: crmStats.activos,         color:'#10b981' },
+              { label:'En pipeline',    v: crmStats.pipeline_count,  color:'#a855f7' },
+              { label:'MRR (€)',        v: crmStats.mrr != null ? `${Number(crmStats.mrr).toLocaleString('es-ES', {maximumFractionDigits:0})}€` : '—', color:'#f59e0b' },
+              { label:'Pipeline (€)',   v: crmStats.pipeline_value != null ? `${Number(crmStats.pipeline_value).toLocaleString('es-ES', {maximumFractionDigits:0})}€` : '—', color:'#06b6d4' },
+              { label:'Leads ext.',     v: crmStats.leads_externos ?? 0, color:'#10b981' },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign:'center' }}>
+                <div style={{ color:s.color, fontSize:18, fontWeight:800, fontFamily:'monospace', lineHeight:1 }}>{s.v}</div>
+                <div style={{ color:'rgba(255,255,255,0.25)', fontSize:10, marginTop:3 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {crmStats.por_fuente && Object.keys(crmStats.por_fuente).length > 0 && (
+            <div style={{ marginTop:12, paddingTop:10, borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', gap:6, flexWrap:'wrap' }}>
+              {Object.entries(crmStats.por_fuente).map(([f, n]) => (
+                <span key={f} style={{ fontSize:10, padding:'2px 8px', borderRadius:4, background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.4)', fontFamily:'monospace' }}>
+                  {f}: {n}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Analytics + Recent audits ──────────────────────────────────────────── */}
       {(chStats || recentAudits.length > 0) && (

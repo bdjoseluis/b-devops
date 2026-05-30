@@ -12,12 +12,14 @@ Se sincronizan con Notion via n8n webhook.
 import asyncio
 import aiohttp
 import asyncpg
+import hmac
 import json
 import os
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from db import get_conn
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
@@ -48,10 +50,6 @@ class LeadIn(BaseModel):
     api_key:  Optional[str] = ""   # alternativa al header
 
 
-async def _db():
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
-    return await asyncpg.connect(DB_URL)
 
 
 async def ensure_fuente_column():
@@ -83,7 +81,8 @@ async def _fire_n8n(path: str, payload: dict):
 
 def _check_key(request: Request, body_key: str = ""):
     header_key = request.headers.get("X-Integration-Key", "")
-    if header_key != INTEGRATION_KEY and body_key != INTEGRATION_KEY:
+    key = header_key or body_key
+    if not key or not hmac.compare_digest(key.encode(), INTEGRATION_KEY.encode()):
         raise HTTPException(status_code=401, detail="API key inválida")
 
 
@@ -110,8 +109,7 @@ async def receive_lead(body: LeadIn, request: Request):
     if notas:
         notas = f"[{fuente}] {notas}"
 
-    conn = await _db()
-    try:
+    async with get_conn() as conn:
         row = await conn.fetchrow(
             """INSERT INTO clients
                (nombre, empresa, email, telefono, web, sector, estado,
@@ -133,8 +131,6 @@ async def receive_lead(body: LeadIn, request: Request):
         for k in ("fecha_creacion", "ultima_actividad"):
             if cliente.get(k):
                 cliente[k] = cliente[k].isoformat()
-    finally:
-        await conn.close()
 
     # Sync a Notion via n8n
     asyncio.create_task(_fire_n8n("/webhook/client-created", {

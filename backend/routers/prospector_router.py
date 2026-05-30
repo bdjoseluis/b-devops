@@ -1,8 +1,9 @@
 import asyncio
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from services import prospector_service
 
-router = APIRouter(prefix="/api/prospector", tags=["prospector"])
+router = APIRouter(prefix="/api/prospector", tags=["prospector"], dependencies=[Depends(auth_required)])
 
 PROVINCE_CITIES = {
     "alicante": [

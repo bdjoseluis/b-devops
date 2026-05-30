@@ -7,21 +7,16 @@ Webhooks a n8n para sincronización con Notion.
 import asyncio
 import aiohttp
 import asyncpg
+import json
 import os
 from fastapi import APIRouter, HTTPException, Depends
 from routers.auth_router import auth_required
+from db import get_conn
 
 router = APIRouter(prefix="/api/clients", tags=["clients"])
 
 DB_URL   = os.environ.get("DATABASE_URL", "")
 N8N_BASE = os.environ.get("N8N_URL", "http://bdev-n8n:5678")
-
-
-# ── DB helpers ────────────────────────────────────────────────────────────────
-async def _db():
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
-    return await asyncpg.connect(DB_URL)
 
 
 async def ensure_clients_table():
@@ -54,6 +49,8 @@ async def ensure_clients_table():
         print(f"[clients] DB init error: {e}")
 
 
+
+
 def _row_to_dict(r) -> dict:
     d = dict(r)
     # Serialize datetime fields to ISO strings for JSON
@@ -82,14 +79,11 @@ async def _fire_n8n(path: str, payload: dict):
 @router.get("")
 async def list_clients(user=Depends(auth_required)):
     """Devuelve todos los clientes ordenados por estrella + actividad reciente."""
-    conn = await _db()
-    try:
+    async with get_conn() as conn:
         rows = await conn.fetch(
             "SELECT * FROM clients ORDER BY estrella DESC, ultima_actividad DESC"
         )
         return {"clients": [_row_to_dict(r) for r in rows]}
-    finally:
-        await conn.close()
 
 
 @router.post("")
@@ -99,8 +93,7 @@ async def create_client(body: dict, user=Depends(auth_required)):
     if not nombre:
         raise HTTPException(status_code=400, detail="El nombre es obligatorio")
 
-    conn = await _db()
-    try:
+    async with get_conn() as conn:
         row = await conn.fetchrow(
             """INSERT INTO clients
                (nombre, empresa, email, telefono, web, sector, estado,
@@ -114,14 +107,12 @@ async def create_client(body: dict, user=Depends(auth_required)):
             body.get("web", ""),
             body.get("sector", "Tecnología"),
             body.get("estado", "Prospecto"),
-            __import__('json').dumps(body.get("servicios", [])),
+            json.dumps(body.get("servicios", [])),
             body.get("notas", ""),
             float(body.get("valor_estimado") or 0),
             bool(body.get("estrella", False)),
         )
         cliente = _row_to_dict(row)
-    finally:
-        await conn.close()
 
     # Notify n8n (fire and forget — never blocks the response)
     asyncio.create_task(_fire_n8n("/webhook/client-created", {
@@ -136,8 +127,7 @@ async def create_client(body: dict, user=Depends(auth_required)):
 @router.put("/{client_id}")
 async def update_client(client_id: str, body: dict, user=Depends(auth_required)):
     """Actualiza un cliente existente."""
-    conn = await _db()
-    try:
+    async with get_conn() as conn:
         existing = await conn.fetchrow("SELECT id FROM clients WHERE id=$1", client_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
@@ -155,15 +145,13 @@ async def update_client(client_id: str, body: dict, user=Depends(auth_required))
             body.get("web", ""),
             body.get("sector", "Tecnología"),
             body.get("estado", "Prospecto"),
-            __import__('json').dumps(body.get("servicios", [])),
+            json.dumps(body.get("servicios", [])),
             body.get("notas", ""),
             float(body.get("valor_estimado") or 0),
             bool(body.get("estrella", False)),
             client_id,
         )
         cliente = _row_to_dict(row)
-    finally:
-        await conn.close()
 
     # Notion sync via n8n
     asyncio.create_task(_fire_n8n("/webhook/client-updated", {
@@ -178,21 +166,17 @@ async def update_client(client_id: str, body: dict, user=Depends(auth_required))
 @router.delete("/{client_id}")
 async def delete_client(client_id: str, user=Depends(auth_required)):
     """Elimina un cliente."""
-    conn = await _db()
-    try:
+    async with get_conn() as conn:
         result = await conn.execute("DELETE FROM clients WHERE id=$1", client_id)
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    finally:
-        await conn.close()
     return {"status": "deleted"}
 
 
 @router.get("/stats")
 async def client_stats(user=Depends(auth_required)):
-    """Estadísticas del CRM para el Dashboard."""
-    conn = await _db()
-    try:
+    """Estadísticas del CRM para el Dashboard, incluyendo breakdown por fuente."""
+    async with get_conn() as conn:
         row = await conn.fetchrow("""
             SELECT
                 COUNT(*)                                             AS total,
@@ -203,9 +187,19 @@ async def client_stats(user=Depends(auth_required)):
                     FILTER (WHERE estado='Activo'), 0)               AS mrr,
                 COALESCE(SUM(valor_estimado)
                     FILTER (WHERE estado IN
-                    ('Prospecto','Contactado','Propuesta')), 0)       AS pipeline_value
+                    ('Prospecto','Contactado','Propuesta')), 0)       AS pipeline_value,
+                COUNT(*) FILTER (WHERE fuente IN
+                    ('carsimport','psicologia','bolsos-clari','otro'))  AS leads_externos
             FROM clients
         """)
-        return dict(row)
-    finally:
-        await conn.close()
+        # Breakdown por fuente (solo fuentes con registros)
+        fuente_rows = await conn.fetch("""
+            SELECT fuente, COUNT(*) AS cnt
+            FROM clients
+            WHERE fuente IS NOT NULL
+            GROUP BY fuente
+            ORDER BY cnt DESC
+        """)
+        stats = dict(row)
+        stats["por_fuente"] = {r["fuente"]: r["cnt"] for r in fuente_rows}
+        return stats

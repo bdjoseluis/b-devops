@@ -2,13 +2,13 @@
 from config_manager import load_config, save_config
 from pathlib import Path
 from datetime import datetime
-from routers.auth_router import admin_required
+from routers.auth_router import admin_required, auth_required
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 @router.get("")
-async def get_settings():
+async def get_settings(user=Depends(auth_required)):
     cfg = load_config()
     # Mask API keys for display (show last 6 chars)
     masked = dict(cfg)
@@ -25,9 +25,8 @@ async def get_settings_raw(user=Depends(admin_required)):
 
 
 @router.post("")
-async def update_settings(body: dict):
+async def update_settings(body: dict, user=Depends(admin_required)):
     cfg = load_config()
-    # Deep merge incoming changes
     for section, val in body.items():
         if isinstance(val, dict) and isinstance(cfg.get(section), dict):
             cfg[section].update(val)
@@ -38,7 +37,7 @@ async def update_settings(body: dict):
 
 
 @router.post("/apis")
-async def update_api_keys(body: dict):
+async def update_api_keys(body: dict, user=Depends(admin_required)):
     cfg = load_config()
     for k, v in body.items():
         if k in cfg["apis"]:
@@ -49,7 +48,7 @@ async def update_api_keys(body: dict):
 
 
 @router.post("/auditor")
-async def update_auditor(body: dict):
+async def update_auditor(body: dict, user=Depends(admin_required)):
     cfg = load_config()
     cfg["auditor"].update(body)
     save_config(cfg)
@@ -57,7 +56,7 @@ async def update_auditor(body: dict):
 
 
 @router.post("/kali")
-async def update_kali(body: dict):
+async def update_kali(body: dict, user=Depends(admin_required)):
     cfg = load_config()
     cfg["kali_ssh"].update(body)
     save_config(cfg)
@@ -65,7 +64,7 @@ async def update_kali(body: dict):
 
 
 @router.get("/kali/test")
-async def test_kali():
+async def test_kali(user=Depends(admin_required)):
     from services.kali_service import run_raw, is_configured
     if not is_configured():
         return {"status": "error", "message": "Kali SSH not configured"}
@@ -74,7 +73,7 @@ async def test_kali():
 
 
 @router.post("/smtp")
-async def update_smtp(body: dict):
+async def update_smtp(body: dict, user=Depends(admin_required)):
     cfg = load_config()
     if "smtp" not in cfg:
         cfg["smtp"] = {}
@@ -84,13 +83,13 @@ async def update_smtp(body: dict):
 
 
 @router.get("/smtp/test")
-async def test_smtp():
+async def test_smtp(user=Depends(admin_required)):
     from services.smtp_service import test_connection
     return await test_connection()
 
 
 @router.get("/dashboard/stats")
-async def dashboard_stats():
+async def dashboard_stats(user=Depends(auth_required)):
     cfg = load_config()
     apis = cfg.get("apis", {})
 

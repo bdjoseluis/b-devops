@@ -4,12 +4,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
 
+import db as _db
 from routers import (
     osint_router, scan_router, ai_router, report_router,
     settings_router, tools_router, tempmail_router, prospector_router
@@ -26,21 +26,15 @@ DB_URL = os.environ.get("DATABASE_URL", "")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Connection pool compartido — evita abrir una conexión nueva por request
     if DB_URL:
-        app.state.db_pool = await asyncpg.create_pool(
-            DB_URL, min_size=2, max_size=10, command_timeout=30
-        )
-    else:
-        app.state.db_pool = None
+        await _db.init_pool(DB_URL)
 
     await auth_router.ensure_users_table()
     await clients_router.ensure_clients_table()
     await integrations_router.ensure_fuente_column()
     yield
 
-    if app.state.db_pool:
-        await app.state.db_pool.close()
+    await _db.close_pool()
 
 
 app = FastAPI(

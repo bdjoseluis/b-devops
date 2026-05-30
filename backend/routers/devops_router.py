@@ -1,15 +1,16 @@
-﻿"""
+"""
 B-DEVOPS — DevOps Hub Router
 Proxy para Vercel, Supabase y health checks de servicios locales (ClickHouse, n8n)
 """
 
 import asyncio
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from config_manager import get_api_key, load_config
 from services import vercel_service, supabase_service, clickhouse_service
 
-router = APIRouter(prefix="/api/devops", tags=["devops"])
+router = APIRouter(prefix="/api/devops", tags=["devops"], dependencies=[Depends(auth_required)])
 
 
 # ── Vercel ────────────────────────────────────────────────────────────────

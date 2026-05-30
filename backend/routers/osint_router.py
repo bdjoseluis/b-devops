@@ -1,6 +1,7 @@
 import asyncio
 import re
 from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from pydantic import BaseModel
 from services import (
     whois_service,
@@ -15,7 +16,7 @@ from services import (
 from services.rate_limiter import osint_limiter
 from config_manager import load_config
 
-router = APIRouter(prefix="/api/osint", tags=["osint"], dependencies=[Depends(osint_limiter)])
+router = APIRouter(prefix="/api/osint", tags=["osint"], dependencies=[Depends(osint_limiter), Depends(auth_required)])
 
 
 class OSINTRequest(BaseModel):

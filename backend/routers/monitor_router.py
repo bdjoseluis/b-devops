@@ -1,4 +1,4 @@
-﻿"""
+"""
 B-DEVOPS — Uptime Monitor Router
 Comprueba URLs y devuelve status, latencia y SSL
 """
@@ -8,9 +8,10 @@ import time
 import asyncio
 import datetime
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 
-router = APIRouter(prefix="/api/monitor", tags=["monitor"])
+router = APIRouter(prefix="/api/monitor", tags=["monitor"], dependencies=[Depends(auth_required)])
 
 
 def _ssl_days_remaining(hostname: str) -> int | None:
@@ -32,7 +33,7 @@ async def _check_url(url: str) -> dict:
     result = {"url": url, "status": "down", "code": None, "latency_ms": None, "ssl_days": None, "error": None}
     t0 = time.monotonic()
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=True, verify=False) as client:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True, verify=True) as client:
             r = await client.get(url)
             result["latency_ms"] = round((time.monotonic() - t0) * 1000)
             result["code"] = r.status_code

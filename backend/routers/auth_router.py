@@ -23,28 +23,35 @@ from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config_manager import load_config, save_config
+from db import get_conn
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 bearer = HTTPBearer(auto_error=False)
 
-SECRET_KEY       = os.environ.get("SECRET_KEY", "")
-TOKEN_TTL        = 60 * 60          # 1 hora — access token
-REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30  # 30 días — refresh token
-DB_URL           = os.environ.get("DATABASE_URL", "")
+SECRET_KEY        = os.environ.get("SECRET_KEY", "")
+TOKEN_TTL         = 60 * 60               # 1 hora — access token
+REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30    # 30 días — refresh token
+DB_URL            = os.environ.get("DATABASE_URL", "")
 
-# ── Rate limiting en memoria (login) ──────────────────────────────────────────
-# Máximo 10 intentos por IP en ventana de 10 minutos
-_login_attempts: dict[str, list[float]] = defaultdict(list)
-_RATE_WINDOW   = 600   # segundos
-_RATE_MAX      = 10    # intentos
+# ── Rate limiting en memoria ───────────────────────────────────────────────────
+_attempts: dict[str, list[float]] = defaultdict(list)
+_last_gc: float = 0.0
 
-def _check_rate_limit(ip: str):
-    now    = time.time()
-    window = now - _RATE_WINDOW
-    _login_attempts[ip] = [t for t in _login_attempts[ip] if t > window]
-    if len(_login_attempts[ip]) >= _RATE_MAX:
-        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 10 minutos.")
-    _login_attempts[ip].append(now)
+def _check_rate_limit(ip: str, max_calls: int = 10, window: int = 600):
+    """Generic sliding-window rate limiter. Raises 429 if exceeded."""
+    global _last_gc
+    now = time.time()
+    cutoff = now - window
+    _attempts[ip] = [t for t in _attempts[ip] if t > cutoff]
+    if len(_attempts[ip]) >= max_calls:
+        raise HTTPException(status_code=429, detail=f"Demasiados intentos. Espera {window // 60} minutos.")
+    _attempts[ip].append(now)
+    # Purge stale keys every 5 minutes to prevent unbounded growth
+    if now - _last_gc > 300:
+        _last_gc = now
+        stale = [k for k, v in _attempts.items() if not v]
+        for k in stale:
+            del _attempts[k]
 
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
@@ -113,15 +120,12 @@ def admin_required(user=Depends(auth_required)):
 
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
-async def get_db():
-    return await asyncpg.connect(DB_URL)
-
 async def ensure_users_table():
-    """Create users and refresh_tokens tables if they don't exist."""
+    """Create users and refresh_tokens tables if they don't exist (startup — direct connect)."""
     if not DB_URL:
         return
     try:
-        conn = await get_db()
+        conn = await asyncpg.connect(DB_URL)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -173,12 +177,10 @@ def _send_email(to: str, subject: str, html: str):
 # ── Refresh token helpers ─────────────────────────────────────────────────────
 async def _create_refresh_token(user_id: str) -> str:
     """Genera un refresh token opaco, lo guarda hasheado en BD y devuelve el raw."""
-    raw   = secrets.token_urlsafe(48)
+    raw    = secrets.token_urlsafe(48)
     hashed = hashlib.sha256(raw.encode()).hexdigest()
     expires = time.time() + REFRESH_TOKEN_TTL
-    conn = await get_db()
-    try:
-        # limpiar tokens viejos del mismo usuario
+    async with get_conn() as conn:
         await conn.execute(
             "DELETE FROM refresh_tokens WHERE user_id=$1 AND (expires_at < NOW() OR revoked=TRUE)",
             user_id
@@ -187,30 +189,22 @@ async def _create_refresh_token(user_id: str) -> str:
             "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, to_timestamp($3))",
             user_id, hashed, expires
         )
-    finally:
-        await conn.close()
     return raw
 
 async def _verify_refresh_token(raw: str) -> dict | None:
     """Verifica el refresh token y devuelve el row si es válido."""
     hashed = hashlib.sha256(raw.encode()).hexdigest()
-    conn   = await get_db()
-    try:
+    async with get_conn() as conn:
         row = await conn.fetchrow(
             "SELECT * FROM refresh_tokens WHERE token_hash=$1 AND revoked=FALSE AND expires_at > NOW()",
             hashed
         )
         return dict(row) if row else None
-    finally:
-        await conn.close()
 
 async def _revoke_refresh_token(raw: str):
     hashed = hashlib.sha256(raw.encode()).hexdigest()
-    conn   = await get_db()
-    try:
+    async with get_conn() as conn:
         await conn.execute("UPDATE refresh_tokens SET revoked=TRUE WHERE token_hash=$1", hashed)
-    finally:
-        await conn.close()
 
 
 # ── n8n webhook helper ────────────────────────────────────────────────────────
@@ -249,14 +243,11 @@ async def login(body: dict, request: Request):
         return {"token": token, "refresh_token": refresh_token, "expires_in": TOKEN_TTL, "role": "admin"}
 
     # ── User login (username + password) ─────────────────────────────────────
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
     try:
-        conn = await get_db()
-        user = await conn.fetchrow(
-            "SELECT * FROM users WHERE username=$1 OR email=$1", username
-        )
-        await conn.close()
+        async with get_conn() as conn:
+            user = await conn.fetchrow(
+                "SELECT * FROM users WHERE username=$1 OR email=$1", username
+            )
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error DB: {e}")
 
@@ -272,12 +263,11 @@ async def login(body: dict, request: Request):
     # Auto-upgrade legacy SHA-256 hash → PBKDF2 on successful login
     if not user["password_hash"].startswith('pbkdf2:'):
         try:
-            conn2 = await get_db()
-            await conn2.execute(
-                "UPDATE users SET password_hash=$1 WHERE id=$2",
-                _hash_pw(password), user["id"]
-            )
-            await conn2.close()
+            async with get_conn() as conn2:
+                await conn2.execute(
+                    "UPDATE users SET password_hash=$1 WHERE id=$2",
+                    _hash_pw(password), user["id"]
+                )
         except Exception:
             pass  # Non-fatal — will retry on next login
 
@@ -292,35 +282,34 @@ async def login(body: dict, request: Request):
 
 
 @router.post("/register")
-async def register(body: dict):
+async def register(body: dict, request: Request):
     """Registro de nuevo usuario — queda pendiente hasta aprobación del admin."""
+    client_ip = request.client.host if request.client else "unknown"
+    _check_rate_limit(f"reg:{client_ip}", max_calls=5, window=600)  # 5 registros / 10 min por IP
+
     username = body.get("username", "").strip()
     email    = body.get("email", "").strip()
     password = body.get("password", "").strip()
-    reason   = body.get("reason", "").strip()  # Por qué quiere acceso
+    reason   = body.get("reason", "").strip()
 
     if not username or not email or not password:
         raise HTTPException(status_code=400, detail="username, email y password son obligatorios")
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
 
     try:
-        conn = await get_db()
-        existing = await conn.fetchrow(
-            "SELECT id FROM users WHERE username=$1 OR email=$2", username, email
-        )
-        if existing:
-            await conn.close()
-            raise HTTPException(status_code=409, detail="Usuario o email ya registrado")
+        async with get_conn() as conn:
+            existing = await conn.fetchrow(
+                "SELECT id FROM users WHERE username=$1 OR email=$2", username, email
+            )
+            if existing:
+                raise HTTPException(status_code=409, detail="Usuario o email ya registrado")
 
-        uid = str(uuid.uuid4())
-        await conn.execute(
-            "INSERT INTO users (id, username, email, password_hash, status) VALUES ($1,$2,$3,$4,'pending')",
-            uid, username, email, _hash_pw(password)
-        )
-        await conn.close()
+            uid = str(uuid.uuid4())
+            await conn.execute(
+                "INSERT INTO users (id, username, email, password_hash, status) VALUES ($1,$2,$3,$4,'pending')",
+                uid, username, email, _hash_pw(password)
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -368,19 +357,15 @@ async def register(body: dict):
 @router.get("/approve/{user_id}")
 async def approve_user(user_id: str):
     """Aprobar usuario — llamado desde el link del email."""
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
     try:
-        conn = await get_db()
-        user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
-        if not user:
-            await conn.close()
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        await conn.execute(
-            "UPDATE users SET status='approved', approved_at=NOW(), approved_by='admin-email' WHERE id=$1",
-            user_id
-        )
-        await conn.close()
+        async with get_conn() as conn:
+            user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            await conn.execute(
+                "UPDATE users SET status='approved', approved_at=NOW(), approved_by='admin-email' WHERE id=$1",
+                user_id
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -413,16 +398,12 @@ async def approve_user(user_id: str):
 @router.get("/reject/{user_id}")
 async def reject_user(user_id: str):
     """Rechazar usuario — llamado desde el link del email."""
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
     try:
-        conn = await get_db()
-        user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
-        if not user:
-            await conn.close()
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        await conn.execute("UPDATE users SET status='rejected' WHERE id=$1", user_id)
-        await conn.close()
+        async with get_conn() as conn:
+            user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            await conn.execute("UPDATE users SET status='rejected' WHERE id=$1", user_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -455,13 +436,12 @@ async def reject_user_api(user_id: str, user=Depends(admin_required)):
 @router.get("/users")
 async def list_users(user=Depends(admin_required)):
     """Listar todos los usuarios (solo admin)."""
-    if not DB_URL:
-        return {"users": []}
     try:
-        conn = await get_db()
-        rows = await conn.fetch("SELECT id, username, email, role, status, created_at, approved_at FROM users ORDER BY created_at DESC")
-        await conn.close()
-        return {"users": [dict(r) for r in rows]}
+        async with get_conn() as conn:
+            rows = await conn.fetch(
+                "SELECT id, username, email, role, status, created_at, approved_at FROM users ORDER BY created_at DESC"
+            )
+            return {"users": [dict(r) for r in rows]}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error DB: {e}")
 
@@ -469,11 +449,8 @@ async def list_users(user=Depends(admin_required)):
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: str, user=Depends(admin_required)):
     """Eliminar usuario (solo admin)."""
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
-    conn = await get_db()
-    await conn.execute("DELETE FROM users WHERE id=$1", user_id)
-    await conn.close()
+    async with get_conn() as conn:
+        await conn.execute("DELETE FROM users WHERE id=$1", user_id)
     return {"status": "deleted"}
 
 
@@ -535,13 +512,8 @@ async def refresh_token(body: dict):
         return {"token": new_token, "expires_in": TOKEN_TTL, "role": "admin"}
 
     # Usuario normal — verificar que sigue activo
-    if not DB_URL:
-        raise HTTPException(status_code=503, detail="BD no configurada")
-    conn = await get_db()
-    try:
+    async with get_conn() as conn:
         user = await conn.fetchrow("SELECT username, role, status FROM users WHERE id=$1", user_id)
-    finally:
-        await conn.close()
 
     if not user or user["status"] != "approved":
         await _revoke_refresh_token(raw)

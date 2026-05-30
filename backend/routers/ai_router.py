@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from pydantic import BaseModel
 from typing import List, Optional
 from services import gemini_service, groq_service
 
-router = APIRouter(prefix="/api/ai", tags=["ai"])
+router = APIRouter(prefix="/api/ai", tags=["ai"], dependencies=[Depends(auth_required)])
 
 
 class ChatRequest(BaseModel):

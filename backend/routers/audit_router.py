@@ -1,4 +1,4 @@
-﻿"""
+"""
 B-DEVOPS — Auto Audit Router
 Unified endpoint: one input → all applicable OSINT modules in parallel → auto report
 Supports: email, IP, domain, phone number, social username, URL
@@ -7,7 +7,8 @@ Supports: email, IP, domain, phone number, social username, URL
 import asyncio
 import re
 from pathlib import Path
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth_router import auth_required
 from services import (
     whois_service, dns_service, subdomain_service, ssl_service,
     shodan_service, virustotal_service, ipinfo_service, email_service,
@@ -17,7 +18,7 @@ from services import (
 from config_manager import load_config, get_api_key
 from services import clickhouse_service
 
-router = APIRouter(prefix="/api/audit", tags=["audit"])
+router = APIRouter(prefix="/api/audit", tags=["audit"], dependencies=[Depends(auth_required)])
 
 
 # ── Type detection ────────────────────────────────────────────

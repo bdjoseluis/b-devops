@@ -231,7 +231,8 @@ export default function Leads() {
             <span className="text-white">https://api.bdev.qzz.io/api/integrations/lead</span>
             <br />
             <span className="text-gray-500">X-Integration-Key: </span>
-            <span className="text-yellow-400">bdev_int_key_2026</span>
+            <span className="text-yellow-400">{'<INTEGRATION_KEY>'}</span>
+            <span className="text-gray-600"> {/* ver infra/integrations/ */}</span>
           </div>
           <div className="flex gap-3 mt-3 flex-wrap">
             {['carsimport', 'psicologia', 'bolsos-clari'].map(s => (

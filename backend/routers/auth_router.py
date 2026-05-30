@@ -27,9 +27,10 @@ from config_manager import load_config, save_config
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 bearer = HTTPBearer(auto_error=False)
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "")
-TOKEN_TTL  = 60 * 60 * 24 * 7   # 7 días
-DB_URL     = os.environ.get("DATABASE_URL", "")
+SECRET_KEY       = os.environ.get("SECRET_KEY", "")
+TOKEN_TTL        = 60 * 60          # 1 hora — access token
+REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30  # 30 días — refresh token
+DB_URL           = os.environ.get("DATABASE_URL", "")
 
 # ── Rate limiting en memoria (login) ──────────────────────────────────────────
 # Máximo 10 intentos por IP en ventana de 10 minutos
@@ -116,7 +117,7 @@ async def get_db():
     return await asyncpg.connect(DB_URL)
 
 async def ensure_users_table():
-    """Create users table if it doesn't exist."""
+    """Create users and refresh_tokens tables if they don't exist."""
     if not DB_URL:
         return
     try:
@@ -132,6 +133,16 @@ async def ensure_users_table():
                 created_at  TIMESTAMPTZ DEFAULT NOW(),
                 approved_at TIMESTAMPTZ,
                 approved_by TEXT
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                user_id     TEXT NOT NULL,
+                token_hash  TEXT NOT NULL UNIQUE,
+                expires_at  TIMESTAMPTZ NOT NULL,
+                created_at  TIMESTAMPTZ DEFAULT NOW(),
+                revoked     BOOLEAN DEFAULT FALSE
             )
         """)
         await conn.close()
@@ -157,6 +168,49 @@ def _send_email(to: str, subject: str, html: str):
             s.sendmail(smtp_cfg["email"], to, msg.as_string())
     except Exception as e:
         print(f"[auth] Email send error: {e}")
+
+
+# ── Refresh token helpers ─────────────────────────────────────────────────────
+async def _create_refresh_token(user_id: str) -> str:
+    """Genera un refresh token opaco, lo guarda hasheado en BD y devuelve el raw."""
+    raw   = secrets.token_urlsafe(48)
+    hashed = hashlib.sha256(raw.encode()).hexdigest()
+    expires = time.time() + REFRESH_TOKEN_TTL
+    conn = await get_db()
+    try:
+        # limpiar tokens viejos del mismo usuario
+        await conn.execute(
+            "DELETE FROM refresh_tokens WHERE user_id=$1 AND (expires_at < NOW() OR revoked=TRUE)",
+            user_id
+        )
+        await conn.execute(
+            "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, to_timestamp($3))",
+            user_id, hashed, expires
+        )
+    finally:
+        await conn.close()
+    return raw
+
+async def _verify_refresh_token(raw: str) -> dict | None:
+    """Verifica el refresh token y devuelve el row si es válido."""
+    hashed = hashlib.sha256(raw.encode()).hexdigest()
+    conn   = await get_db()
+    try:
+        row = await conn.fetchrow(
+            "SELECT * FROM refresh_tokens WHERE token_hash=$1 AND revoked=FALSE AND expires_at > NOW()",
+            hashed
+        )
+        return dict(row) if row else None
+    finally:
+        await conn.close()
+
+async def _revoke_refresh_token(raw: str):
+    hashed = hashlib.sha256(raw.encode()).hexdigest()
+    conn   = await get_db()
+    try:
+        await conn.execute("UPDATE refresh_tokens SET revoked=TRUE WHERE token_hash=$1", hashed)
+    finally:
+        await conn.close()
 
 
 # ── n8n webhook helper ────────────────────────────────────────────────────────
@@ -190,8 +244,9 @@ async def login(body: dict, request: Request):
         stored = cfg.get("auth", {}).get("password", "")
         if not password or not hmac.compare_digest(password.encode(), stored.encode()):
             raise HTTPException(status_code=401, detail="Contraseña incorrecta")
-        token = _sign({"sub": "admin", "role": "admin", "exp": int(time.time()) + TOKEN_TTL})
-        return {"token": token, "expires_in": TOKEN_TTL, "role": "admin"}
+        token         = _sign({"sub": "admin", "role": "admin", "exp": int(time.time()) + TOKEN_TTL})
+        refresh_token = await _create_refresh_token("admin")
+        return {"token": token, "refresh_token": refresh_token, "expires_in": TOKEN_TTL, "role": "admin"}
 
     # ── User login (username + password) ─────────────────────────────────────
     if not DB_URL:
@@ -226,13 +281,14 @@ async def login(body: dict, request: Request):
         except Exception:
             pass  # Non-fatal — will retry on next login
 
-    token = _sign({
+    token         = _sign({
         "sub":  user["username"],
         "role": user["role"],
         "uid":  user["id"],
         "exp":  int(time.time()) + TOKEN_TTL
     })
-    return {"token": token, "expires_in": TOKEN_TTL, "role": user["role"]}
+    refresh_token = await _create_refresh_token(user["id"])
+    return {"token": token, "refresh_token": refresh_token, "expires_in": TOKEN_TTL, "role": user["role"]}
 
 
 @router.post("/register")
@@ -458,6 +514,55 @@ async def change_password(body: dict, user=Depends(auth_required)):
     cfg.setdefault("auth", {})["password"] = new_password
     save_config(cfg)
     return {"status": "changed"}
+
+
+@router.post("/refresh")
+async def refresh_token(body: dict):
+    """Renueva el access token usando un refresh token válido."""
+    raw = body.get("refresh_token", "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="refresh_token requerido")
+
+    row = await _verify_refresh_token(raw)
+    if not row:
+        raise HTTPException(status_code=401, detail="Refresh token inválido o expirado")
+
+    user_id = row["user_id"]
+
+    # Admin no está en la tabla users
+    if user_id == "admin":
+        new_token = _sign({"sub": "admin", "role": "admin", "exp": int(time.time()) + TOKEN_TTL})
+        return {"token": new_token, "expires_in": TOKEN_TTL, "role": "admin"}
+
+    # Usuario normal — verificar que sigue activo
+    if not DB_URL:
+        raise HTTPException(status_code=503, detail="BD no configurada")
+    conn = await get_db()
+    try:
+        user = await conn.fetchrow("SELECT username, role, status FROM users WHERE id=$1", user_id)
+    finally:
+        await conn.close()
+
+    if not user or user["status"] != "approved":
+        await _revoke_refresh_token(raw)
+        raise HTTPException(status_code=401, detail="Cuenta no válida")
+
+    new_token = _sign({
+        "sub":  user["username"],
+        "role": user["role"],
+        "uid":  user_id,
+        "exp":  int(time.time()) + TOKEN_TTL
+    })
+    return {"token": new_token, "expires_in": TOKEN_TTL, "role": user["role"]}
+
+
+@router.post("/logout")
+async def logout(body: dict):
+    """Revoca el refresh token (cierre de sesión real)."""
+    raw = body.get("refresh_token", "").strip()
+    if raw:
+        await _revoke_refresh_token(raw)
+    return {"status": "logged_out"}
 
 
 @router.get("/me")

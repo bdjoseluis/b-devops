@@ -25,7 +25,7 @@ param(
     [string]$N8nUrl       = "http://localhost:5678",
     [string]$N8nUser      = "admin",
     [string]$N8nPassword  = "REDACTED",
-    [string]$NotionToken  = "REDACTED"
+    [string]$NotionToken  = ""   # Pasa tu token via: -NotionToken "ntn_xxxxx"  (ver backend/config.json)
 )
 
 $ErrorActionPreference = "Stop"

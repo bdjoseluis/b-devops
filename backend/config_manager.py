@@ -31,7 +31,8 @@ DEFAULT_CONFIG = {
         "numverify": "",
         "fullcontact": "",
         "vercel": "",
-        "supabase": ""
+        "supabase": "",
+        "notion": ""
     },
     "nmap_path": "nmap",
     "kali_ssh": {

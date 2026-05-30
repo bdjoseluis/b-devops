@@ -434,11 +434,6 @@ services:
       - loki_data:/loki
     networks:
       - frontend-net
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready | grep -q ready"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
@@ -452,8 +447,7 @@ services:
       - ./infra/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
-      bdev-loki:
-        condition: service_healthy
+      - bdev-loki
     networks:
       - frontend-net
     labels:

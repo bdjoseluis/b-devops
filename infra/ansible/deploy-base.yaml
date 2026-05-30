@@ -1,0 +1,167 @@
+---
+# B-DEVOPS — Playbook base para preparar un Ubuntu limpio con Docker
+#
+# Qué hace:
+#   1. Actualiza el sistema
+#   2. Instala dependencias base (git, curl, ca-certificates, ufw)
+#   3. Instala Docker Engine + Docker Compose plugin (método oficial)
+#   4. Habilita y configura UFW (puertos 22/80/443/51820)
+#   5. Clona el repositorio en /opt/bdev-ops
+#   6. Crea el archivo .env desde las variables del playbook
+#   7. Lanza docker compose up -d
+#
+# Uso:
+#   ansible-playbook -i hosts.yaml deploy-base.yaml --limit hetzner
+
+- name: B-DEVOPS — Base server setup
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    docker_compose_dir: /opt/bdev-ops
+    git_repo: https://github.com/bdjoseluis/b-devops.git
+    git_branch: main
+    # Sobreescribe estas vars con -e o en host_vars/
+    postgres_password: "{{ lookup('env', 'POSTGRES_PASSWORD') | default('changeme') }}"
+    grafana_password: "{{ lookup('env', 'GRAFANA_PASSWORD') | default('changeme') }}"
+    secret_key: "{{ lookup('env', 'SECRET_KEY') | default('changeme_secret') }}"
+    wg_server_host: "{{ lookup('env', 'WG_SERVER_HOST') | default('0.0.0.0') }}"
+
+  tasks:
+
+    # ── 1. Sistema actualizado ────────────────────────────────────────────────
+    - name: Actualizar caché apt
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Upgradear paquetes
+      apt:
+        upgrade: safe
+
+    # ── 2. Dependencias base ──────────────────────────────────────────────────
+    - name: Instalar dependencias
+      apt:
+        name:
+          - git
+          - curl
+          - ca-certificates
+          - gnupg
+          - ufw
+          - python3-pip
+        state: present
+
+    # ── 3. Docker Engine (método oficial) ────────────────────────────────────
+    - name: Añadir clave GPG de Docker
+      shell: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+          | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Añadir repositorio Docker
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+          https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+          > /etc/apt/sources.list.d/docker.list
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Instalar Docker Engine + Compose plugin
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        update_cache: true
+        state: present
+
+    - name: Habilitar y arrancar Docker
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # ── 4. Firewall UFW ───────────────────────────────────────────────────────
+    - name: Configurar UFW — permitir SSH
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Configurar UFW — permitir HTTP
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Configurar UFW — permitir HTTPS
+      ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+
+    - name: Configurar UFW — permitir WireGuard UDP
+      ufw:
+        rule: allow
+        port: "51820"
+        proto: udp
+
+    - name: Activar UFW
+      ufw:
+        state: enabled
+        policy: deny
+
+    # ── 5. Clonar repositorio ─────────────────────────────────────────────────
+    - name: Clonar/actualizar repositorio B-DEVOPS
+      git:
+        repo: "{{ git_repo }}"
+        dest: "{{ docker_compose_dir }}"
+        version: "{{ git_branch }}"
+        force: true
+
+    # ── 6. Crear .env ─────────────────────────────────────────────────────────
+    - name: Crear archivo .env
+      copy:
+        dest: "{{ docker_compose_dir }}/.env"
+        mode: "0600"
+        content: |
+          POSTGRES_USER=bdev
+          POSTGRES_PASSWORD={{ postgres_password }}
+          POSTGRES_DB=bdev_ops
+          CLICKHOUSE_USER=default
+          CLICKHOUSE_PASSWORD=
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD={{ grafana_password }}
+          SECRET_KEY={{ secret_key }}
+          WG_SERVER_HOST={{ wg_server_host }}
+          N8N_BASIC_AUTH_USER=admin
+          N8N_BASIC_AUTH_PASSWORD={{ postgres_password }}
+
+    # ── 7. Levantar el stack ──────────────────────────────────────────────────
+    - name: Levantar docker compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ docker_compose_dir }}"
+        state: present
+        pull: always
+
+    # ── Verificación final ────────────────────────────────────────────────────
+    - name: Verificar health del backend
+      uri:
+        url: http://localhost/api/health
+        status_code: 200
+        timeout: 30
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+
+    - name: Mostrar resultado
+      debug:
+        msg: "✅ B-DEVOPS desplegado correctamente en {{ inventory_hostname }}"

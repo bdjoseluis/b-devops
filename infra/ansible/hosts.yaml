@@ -1,0 +1,30 @@
+---
+# B-DEVOPS — Inventario Ansible
+#
+# Uso local (test sin VPS):
+#   ansible-playbook -i hosts.yaml deploy-base.yaml --limit local
+#
+# Uso contra Hetzner (cuando KYC aprobado):
+#   ansible-playbook -i hosts.yaml deploy-base.yaml --limit hetzner --ask-pass
+
+all:
+  children:
+
+    # ── Entorno local (WSL2 / localhost) ─────────────────────────────────────
+    local:
+      hosts:
+        localhost:
+          ansible_connection: local
+
+    # ── VPS Hetzner (pendiente KYC) ──────────────────────────────────────────
+    hetzner:
+      hosts:
+        bdev-vps:
+          ansible_host: "{{ lookup('env', 'HETZNER_VPS_IP') | default('0.0.0.0') }}"
+          ansible_user: root
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          ansible_python_interpreter: /usr/bin/python3
+      vars:
+        deploy_domain: bdev.qzz.io
+        docker_compose_dir: /opt/bdev-ops
+        git_repo: https://github.com/bdjoseluis/b-devops.git

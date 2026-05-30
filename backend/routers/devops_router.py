@@ -117,7 +117,7 @@ async def stack_status():
     _h = lambda name: name if _in_docker else "localhost"
     services = [
         {"id": "backend",    "name": "B-DEVOPS Backend",  "url": f"http://{_h('bdev-backend')}:8000/api/health",  "port": 8000, "icon": "⚡", "color": "green",  "localUrl": "https://api.bdev.qzz.io/docs"},
-        {"id": "frontend",   "name": "B-DEVOPS Frontend", "url": f"http://{_h('bdev-frontend')}:80",              "port": 3000, "icon": "🖥️", "color": "cyan",   "localUrl": "https://app.bdev.qzz.io"},
+        {"id": "frontend",   "name": "B-DEVOPS Frontend", "url": f"http://{_h('bdev-frontend')}:80",              "port": 80,   "icon": "🖥️", "color": "cyan",   "localUrl": "https://app.bdev.qzz.io"},
         {"id": "n8n",        "name": "n8n Workflows",     "url": f"http://{_h('bdev-n8n')}:5678/healthz",         "port": 5678, "icon": "🔄", "color": "orange", "localUrl": "https://crm.bdev.qzz.io"},
         {"id": "clickhouse", "name": "ClickHouse",        "url": f"http://{_h('bdev-clickhouse')}:8123/ping",     "port": 8123, "icon": "📊", "color": "yellow", "localUrl": "https://monitor.bdev.qzz.io/grafana"},
         {"id": "grafana",    "name": "Grafana",           "url": f"http://{_h('bdev-grafana')}:3000/api/health",  "port": 3000, "icon": "📈", "color": "orange", "localUrl": "https://monitor.bdev.qzz.io/grafana"},

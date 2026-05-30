@@ -572,7 +572,13 @@ def _build_recommendations(data: dict) -> list[str]:
 
 def list_reports() -> list[dict]:
     reports = []
-    for f in sorted(REPORTS_DIR.glob("*.pdf"), key=lambda x: x.stat().st_mtime, reverse=True):
+    # Collect both .docx and .pdf reports
+    files = sorted(
+        [f for ext in ("*.docx", "*.pdf") for f in REPORTS_DIR.glob(ext)],
+        key=lambda x: x.stat().st_mtime,
+        reverse=True,
+    )
+    for f in files:
         reports.append({
             "filename": f.name,
             "path":     str(f),

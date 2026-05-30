@@ -57,6 +57,21 @@ const PRESET_WORKFLOWS = [
     webhook: '/webhook/client-created',
     params: [{ key: 'nombre', label: 'Nombre cliente (test)', placeholder: 'Empresa Test S.L.' }],
   },
+  {
+    id: 'outreach-converted',
+    name: 'Outreach → Cliente convertido',
+    desc: 'Notifica en Notion cuando un lead de outreach se convierte en cliente. Conectar a /webhook/outreach-converted.',
+    icon: Activity,
+    color: 'text-green-400',
+    bg: 'bg-green-900/20',
+    border: 'border-green-700/30',
+    webhook: '/webhook/outreach-converted',
+    params: [
+      { key: 'name',    label: 'Empresa',     placeholder: 'Restaurante La Española' },
+      { key: 'email',   label: 'Email',        placeholder: 'info@restaurante.com' },
+      { key: 'website', label: 'Web',          placeholder: 'https://...' },
+    ],
+  },
 ]
 
 // ─── Status helpers ────────────────────────────────────────────────────────────

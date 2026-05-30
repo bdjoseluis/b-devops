@@ -19,11 +19,22 @@ from typing import Optional
 from fastapi.responses import StreamingResponse
 import csv
 import io
+import aiohttp
 from routers.auth_router import auth_required, admin_required
 from db import get_conn
 import asyncpg
 from services import prospector_service, smtp_service, email_scraper_service
 from config_manager import load_config, get_api_key
+
+N8N_BASE = os.environ.get("N8N_URL", "http://bdev-n8n:5678")
+
+async def _fire_n8n(path: str, payload: dict):
+    try:
+        async with aiohttp.ClientSession() as s:
+            async with s.post(f"{N8N_BASE}{path}", json=payload, timeout=aiohttp.ClientTimeout(total=5)) as r:
+                print(f"[outreach] n8n {path} → {r.status}")
+    except Exception as e:
+        print(f"[outreach] n8n failed: {e}")
 
 router = APIRouter(prefix="/api/outreach", tags=["outreach"], dependencies=[Depends(auth_required)])
 
@@ -470,6 +481,20 @@ async def update_status(lead_id: str, body: UpdateStatusBody):
                 )
         except Exception as e:
             print(f"[outreach] CRM sync error: {e}")
+
+        # n8n webhook — notify about converted lead
+        lead = _row(row)
+        asyncio.create_task(_fire_n8n("/webhook/outreach-converted", {
+            "event":   "outreach_converted",
+            "name":    lead["name"],
+            "email":   lead.get("email", ""),
+            "phone":   lead.get("phone", ""),
+            "website": lead.get("website", ""),
+            "sector":  lead.get("sector", ""),
+            "score":   lead.get("opportunity_score", 0),
+            "notes":   lead.get("notes", ""),
+            "timestamp": datetime.utcnow().isoformat(),
+        }))
 
     return _row(row)
 

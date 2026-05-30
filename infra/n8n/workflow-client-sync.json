@@ -1,0 +1,249 @@
+{
+  "name": "B-DEVOPS: Client CRM -> Notion Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "client-created",
+        "options": {}
+      },
+      "id": "webhook-client-created",
+      "name": "Webhook: Client Created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 200],
+      "webhookId": "client-created"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "client-updated",
+        "options": {}
+      },
+      "id": "webhook-client-updated",
+      "name": "Webhook: Client Updated",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 400],
+      "webhookId": "client-updated"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "37089d8c-ad66-8175-85b0-c907ce9c3a89",
+          "mode": "id"
+        },
+        "title": "={{ $json.body.client.nombre }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Empresa",
+              "type": "richText",
+              "textContent": "={{ $json.body.client.empresa || '' }}"
+            },
+            {
+              "key": "Email",
+              "type": "email",
+              "emailValue": "={{ $json.body.client.email || '' }}"
+            },
+            {
+              "key": "Telefono",
+              "type": "phoneNumber",
+              "phoneValue": "={{ $json.body.client.telefono || '' }}"
+            },
+            {
+              "key": "Web",
+              "type": "url",
+              "urlValue": "={{ $json.body.client.web || '' }}"
+            },
+            {
+              "key": "Estado",
+              "type": "select",
+              "selectValue": "={{ $json.body.client.estado || 'Prospecto' }}"
+            },
+            {
+              "key": "Sector",
+              "type": "select",
+              "selectValue": "={{ $json.body.client.sector || 'Tecnología' }}"
+            },
+            {
+              "key": "Servicios",
+              "type": "multiSelect",
+              "multiSelectValue": "={{ $json.body.servicios || [] }}"
+            },
+            {
+              "key": "Valor EUR",
+              "type": "number",
+              "numberValue": "={{ $json.body.client.valor_estimado || 0 }}"
+            },
+            {
+              "key": "Prioritario",
+              "type": "checkbox",
+              "checkboxValue": "={{ $json.body.client.estrella || false }}"
+            },
+            {
+              "key": "Notas",
+              "type": "richText",
+              "textContent": "={{ $json.body.client.notas || '' }}"
+            },
+            {
+              "key": "Fuente",
+              "type": "richText",
+              "textContent": "B-DEVOPS CRM"
+            }
+          ]
+        }
+      },
+      "id": "notion-create-client",
+      "name": "Notion: Crear Cliente",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [500, 200],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "search",
+        "databaseId": {
+          "__rl": true,
+          "value": "37089d8c-ad66-8175-85b0-c907ce9c3a89",
+          "mode": "id"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "title",
+              "condition": "title",
+              "operation": "equals",
+              "value": "={{ $json.body.client.nombre }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "notion-search-client",
+      "name": "Notion: Buscar Cliente",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [500, 400],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Empresa",
+              "type": "richText",
+              "textContent": "={{ $('Webhook: Client Updated').item.json.body.client.empresa || '' }}"
+            },
+            {
+              "key": "Email",
+              "type": "email",
+              "emailValue": "={{ $('Webhook: Client Updated').item.json.body.client.email || '' }}"
+            },
+            {
+              "key": "Estado",
+              "type": "select",
+              "selectValue": "={{ $('Webhook: Client Updated').item.json.body.client.estado || 'Prospecto' }}"
+            },
+            {
+              "key": "Valor EUR",
+              "type": "number",
+              "numberValue": "={{ $('Webhook: Client Updated').item.json.body.client.valor_estimado || 0 }}"
+            },
+            {
+              "key": "Prioritario",
+              "type": "checkbox",
+              "checkboxValue": "={{ $('Webhook: Client Updated').item.json.body.client.estrella || false }}"
+            },
+            {
+              "key": "Notas",
+              "type": "richText",
+              "textContent": "={{ $('Webhook: Client Updated').item.json.body.client.notas || '' }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-update-client",
+      "name": "Notion: Actualizar Cliente",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [760, 400],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credential",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"synced\": \"notion\" }"
+      },
+      "id": "respond-create",
+      "name": "Respond: Created",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [760, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"synced\": \"notion\" }"
+      },
+      "id": "respond-update",
+      "name": "Respond: Updated",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 400]
+    }
+  ],
+  "connections": {
+    "Webhook: Client Created": {
+      "main": [[{ "node": "Notion: Crear Cliente", "type": "main", "index": 0 }]]
+    },
+    "Notion: Crear Cliente": {
+      "main": [[{ "node": "Respond: Created", "type": "main", "index": 0 }]]
+    },
+    "Webhook: Client Updated": {
+      "main": [[{ "node": "Notion: Buscar Cliente", "type": "main", "index": 0 }]]
+    },
+    "Notion: Buscar Cliente": {
+      "main": [[{ "node": "Notion: Actualizar Cliente", "type": "main", "index": 0 }]]
+    },
+    "Notion: Actualizar Cliente": {
+      "main": [[{ "node": "Respond: Updated", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "B-DEVOPS" }, { "name": "CRM" }],
+  "meta": {
+    "templateId": "bdevops-client-notion-sync",
+    "instanceId": "bdevops"
+  }
+}

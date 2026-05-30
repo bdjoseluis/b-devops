@@ -162,6 +162,14 @@ export const monitor = {
   batch: (urls) => api.post('/monitor/batch', { urls }, { timeout: 30000 }).then(r => r.data),
 }
 
+export const clients = {
+  list:   ()           => api.get('/clients').then(r => r.data),
+  create: (body)       => api.post('/clients', body).then(r => r.data),
+  update: (id, body)   => api.put(`/clients/${id}`, body).then(r => r.data),
+  remove: (id)         => api.delete(`/clients/${id}`).then(r => r.data),
+  stats:  ()           => api.get('/clients/stats').then(r => r.data),
+}
+
 export const prospector = {
   search: (location, category = 'empresa', radius_km = 10, limit = 30) =>
     api.post('/prospector/search', { location, category, radius_km, limit }, { timeout: 120000 }).then(r => r.data),

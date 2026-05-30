@@ -17,12 +17,14 @@ from routers import audit_router
 from routers import devops_router
 from routers import auth_router
 from routers import monitor_router
+from routers import clients_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Crear tablas en BD al arrancar
     await auth_router.ensure_users_table()
+    await clients_router.ensure_clients_table()
     yield
 
 
@@ -60,6 +62,7 @@ app.include_router(audit_router.router)
 app.include_router(devops_router.router)
 app.include_router(auth_router.router)
 app.include_router(monitor_router.router)
+app.include_router(clients_router.router)
 
 
 @app.get("/api/health")

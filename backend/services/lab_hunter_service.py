@@ -86,7 +86,7 @@ def ensure_vpn(client, steps) -> bool:
     _run(client, f"echo {_sudo_pw()} | sudo -S bash -c "
                  f"'pkill openvpn 2>/dev/null; nohup openvpn --config \"{ovpn}\" "
                  f"--daemon >/tmp/htbvpn.log 2>&1'")
-    for _ in range(12):
+    for _ in range(25):   # ~75s: el primer connect a HTB puede tardar 40-60s
         time.sleep(3)
         out = _run(client, "ip -br a | grep tun || echo NO")
         if "tun" in out and "NO" not in out:
@@ -309,13 +309,27 @@ def _hunt(target: str) -> dict:
         _step(steps, "CONECTIVIDAD", "ping objetivo", "vivo", ping,
               [f"rtt={rtt.group(1)}ms"] if rtt else [])
 
-        nm = _run(client, f"nmap -T4 -sV --open {target}", timeout=220)
+        # Recon escalonada: 1) top-1000 con -sV (rápido, cubre la mayoría).
+        # 2) si NO sale ningún puerto, escalar a full -p- (servicios en puertos
+        # raros fuera del top-1000, p.ej. Redis 6379 = caja Redeemer).
+        nm = _run(client, f"nmap -T4 -sV --open -Pn {target}", timeout=220)
         ports = [(int(p), s) for p, s in re.findall(r"^(\d+)/tcp\s+open\s+(\S+)", nm, re.M)]
+        extra = ""
+        if not ports:
+            disc = _run(client, f"nmap -p- --min-rate 3000 -T4 --open -Pn {target}", timeout=300)
+            allp = list(dict.fromkeys(re.findall(r"^(\d+)/tcp\s+open", disc, re.M)))
+            if allp:
+                nm2 = _run(client, f"nmap -sV -p {','.join(allp)} --open -Pn {target}", timeout=250)
+                ports = [(int(p), s) for p, s in re.findall(r"^(\d+)/tcp\s+open\s+(\S+)", nm2, re.M)]
+                extra = "\n--- top-1000 vacío → full -p- ---\n" + disc + "\n--- -sV ---\n" + nm2
+            else:
+                extra = "\n--- full -p- (host sin puertos TCP) ---\n" + disc
         res["services"] = [{"port": p, "service": s} for p, s in ports]
-        _step(steps, "RECON", "nmap -sV", f"{len(ports)} puerto(s) abierto(s)", nm,
-              [f"{p}/{s}" for p, s in ports])
+        _step(steps, "RECON", "nmap -sV (top-1000)" + (" → escala a -p-" if extra else ""),
+              f"{len(ports)} puerto(s) abierto(s)", nm + extra, [f"{p}/{s}" for p, s in ports])
 
         ran = set()
+        sin_playbook = []
         for p, svc in ports:
             key = svc.rstrip("?").lower()   # nmap a veces marca "microsoft-ds?"
             pb = PLAYBOOKS.get(key)
@@ -323,10 +337,29 @@ def _hunt(target: str) -> dict:
                 ran.add(pb)                  # 139 y 445 comparten playbook: una sola pasada
                 res["flags"] += pb(client, target, steps)
             elif not pb:
+                sin_playbook.append(f"{p}/{svc}")
                 _step(steps, "PLAYBOOK", f"{p}/{svc}",
-                      "sin playbook todavía — pendiente de enseñar")
+                      "sin playbook — lo intentará el cerebro IA")
 
         res["flags"] = list(dict.fromkeys(res["flags"]))
+
+        # Cerebro autónomo: si ningún playbook conocido soltó flag (o hay servicios
+        # sin playbook), que la IA lo intente leyendo el vault. Modo seguro (jaula).
+        if ports and not res["flags"]:
+            try:
+                from services import lab_brain, lab_vault as _lv
+                hint = _lv.recall(res["services"], target)
+                brain_flags = lab_brain.assist(
+                    target,
+                    run=lambda c, t=120: _run(client, c, timeout=t),
+                    step=lambda fase, accion, resultado, salida="", hallazgos=None:
+                        _step(steps, fase, accion, resultado, salida, hallazgos),
+                    services=res["services"], nmap_out=nm, vault_hint=hint)
+                res["flags"] += brain_flags
+                res["flags"] = list(dict.fromkeys(res["flags"]))
+            except Exception as ex:
+                _step(steps, "IA", "cerebro autónomo", f"omitido: {ex}")
+
         res["status"] = "owned" if res["flags"] else "recon-only"
     finally:
         client.close()

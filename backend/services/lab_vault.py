@@ -170,6 +170,47 @@ def _append_index(vault: Path, res: dict, runbook_name: str) -> None:
         fh.write(row)
 
 
+def recall(services: list, target: str = "", max_chars: int = 3000) -> str:
+    """
+    RAG simple para el cerebro: recupera de los runbooks del vault los "caminos
+    ganadores" de máquinas con servicios parecidos a los actuales. Devuelve texto
+    plano listo para inyectar como contexto. Best-effort: si falla, cadena vacía.
+    """
+    try:
+        rb_dir = _vault_dir() / "runbooks"
+        if not rb_dir.exists():
+            return ""
+        wanted = set()
+        for s in services:
+            svc = re.sub(r"[?]", "", str(s.get("service", ""))).lower()
+            if svc:
+                wanted.add(svc)
+            if s.get("port"):
+                wanted.add(str(s["port"]))
+        if not wanted:
+            return ""
+
+        hits = []
+        for f in sorted(rb_dir.glob("*.md"), reverse=True):  # más recientes primero
+            txt = f.read_text(encoding="utf-8", errors="replace")
+            if target and f"target: {target}\n" in txt:
+                continue  # no recordarse a sí misma
+            m = re.search(r"servicios:\s*\[(.*?)\]", txt)
+            svcs = m.group(1).lower() if m else ""
+            if not any(w in svcs for w in wanted):
+                continue
+            cam = re.search(r"## Camino ganador\n(.*?)(?:\n## |\Z)", txt, re.S)
+            head = re.search(r"# Lab Hunter — (.+)", txt)
+            name = head.group(1).strip() if head else f.stem
+            cuerpo = cam.group(1).strip() if cam else "(sin camino ganador registrado)"
+            hits.append(f"### {name} (servicios: {svcs})\n{cuerpo}")
+            if sum(len(h) for h in hits) > max_chars:
+                break
+        return "\n\n".join(hits)[:max_chars]
+    except Exception:
+        return ""
+
+
 def save(res: dict) -> str:
     """
     Persiste un resultado de hunt en el vault. Best-effort: cualquier error se

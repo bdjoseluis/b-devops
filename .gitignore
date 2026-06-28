@@ -60,3 +60,6 @@ Thumbs.db
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
 logs/
+
+# Lab Hunter — vault de runtime (runbooks + flags reales), no al repo
+backend/lab_hunter_vault/

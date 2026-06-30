@@ -12,6 +12,8 @@ pass.txt
 CONTRASEÑAS.md
 # config.json contiene API keys, contraseñas y pines — NUNCA al repo
 backend/config.json
+# crm-deploy: scripts de deploy de usar-y-tirar con secretos (root VPS, etc.) — NUNCA al repo
+crm-deploy/
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/

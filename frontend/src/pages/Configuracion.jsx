@@ -272,7 +272,7 @@ export default function Configuracion() {
               </button>
             </form>
             {pinError && <p className="text-red-400 text-xs">{pinError}</p>}
-            <p className="text-gray-600 text-xs">PIN por defecto: <code className="text-gray-400">REDACTED</code> — cámbialo abajo</p>
+            <p className="text-gray-600 text-xs">Introduce el PIN de administrador que configuraste</p>
           </div>
         ) : (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 text-xs">
@@ -526,7 +526,7 @@ export default function Configuracion() {
         <div className="flex items-center gap-2 mb-4">
           <Lock size={16} className="text-gray-400" />
           <span className="text-gray-300 font-semibold">Contraseña de acceso</span>
-          <span className="text-gray-500 text-xs">— protege el acceso a B-DEVOPS</span>
+          <span className="text-gray-500 text-xs">— protege el acceso a DEVOPS</span>
         </div>
         <div className="flex gap-3">
           <input
@@ -550,7 +550,7 @@ export default function Configuracion() {
             {pwSaved ? <><CheckCircle size={14} /> Guardada</> : <><Save size={14} /> Cambiar</>}
           </button>
         </div>
-        <p className="text-gray-600 text-xs mt-2">Contraseña actual almacenada en config.json (por defecto: <code className="text-gray-400">REDACTED</code>)</p>
+        <p className="text-gray-600 text-xs mt-2">Contraseña de acceso (se almacena en config.json / variable de entorno, fuera del repositorio)</p>
       </div>
 
       {/* Change Admin PIN */}
@@ -566,7 +566,7 @@ export default function Configuracion() {
           <strong>Aviso legal:</strong> Las API keys y configuraciones se almacenan en un archivo local (config.json)
           en tu máquina. No se transmiten a ningún servidor externo más que a las APIs configuradas.
           El uso de esta herramienta implica la aceptación de las condiciones de uso de cada servicio integrado.
-          Solo usa B-DEVOPS en sistemas sobre los que tienes autorización explícita.
+          Solo usa DEVOPS en sistemas sobre los que tienes autorización explícita.
         </p>
       </div>
 

@@ -24,7 +24,7 @@ param(
 
     [string]$N8nUrl       = "http://localhost:5678",
     [string]$N8nUser      = "admin",
-    [string]$N8nPassword  = "REDACTED",
+    [string]$N8nPassword  = $env:N8N_BASIC_AUTH_PASSWORD,   # define N8N_BASIC_AUTH_PASSWORD o pasa -N8nPassword "..."
     [string]$NotionToken  = ""   # Pasa tu token via: -NotionToken "ntn_xxxxx"  (ver backend/config.json)
 )
 

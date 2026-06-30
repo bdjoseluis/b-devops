@@ -71,15 +71,16 @@ services:
     labels:
       - "traefik.enable=true"
       # ── Middleware: Basic Auth para monitor.bdev.qzz.io ─────────────────────
-      # Contraseña: REDACTED  (generado con httpd:2.4 htpasswd -nb)
-      # Los $$ en YAML son $ literales — necesario para el formato htpasswd
+      # Hash htpasswd para el usuario admin. Genera el tuyo (NO subas la contraseña en claro):
+      #   docker run --rm httpd:2.4 htpasswd -nb admin 'TU_PASSWORD'
+      # y duplica cada $ -> $$ (en YAML $$ es un $ literal, necesario para htpasswd)
       - "traefik.http.middlewares.monitor-auth.basicauth.users=admin:$$apr1$$0iPkpzJA$$Jk1U1e86CbV7/Mq.ZgY22/"
       - "traefik.http.middlewares.monitor-auth.basicauth.realm=B-Dev Monitor"
       # ── Middleware: VPN-only — permite sólo subnet WireGuard (10.100.0.0/24) ─
       # Las IPs VPN llegan directamente (bypass Cloudflare) desde el túnel WG.
       # Para que funcione: el cliente VPN debe usar el host file para resolver
       # los dominios admin a 10.100.0.1 (IP del servidor WG en Docker net).
-      - "traefik.http.middlewares.vpn-only.ipallowlist.sourcerange=10.100.0.0/24,127.0.0.1/32,172.16.0.0/12,192.168.0.0/16"
+      - "traefik.http.middlewares.vpn-only.ipallowlist.sourcerange=10.100.0.0/24,127.0.0.1/32"
       # ── Router: Traefik Dashboard ────────────────────────────────────────────
       - "traefik.http.routers.traefik-dash.rule=Host(`monitor.bdev.qzz.io`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
       - "traefik.http.routers.traefik-dash.service=api@internal"
@@ -360,6 +361,10 @@ services:
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       # Datasource y dashboards configurados via provisioning (infra/grafana/provisioning/)
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/bdev-overview.json
+      # Credenciales PostgreSQL para datasource directo (devesan + apps)
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -368,6 +373,7 @@ services:
       - bdev-prometheus
     networks:
       - frontend-net
+      - backend-net
     labels:
       - "traefik.enable=true"
       # Grafana en /grafana dentro de monitor.bdev.qzz.io
@@ -503,6 +509,63 @@ services:
       - frontend-net
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
+
+  # ── devesan-backend — API FastAPI para PsicoSalud Devesan ───────────────────
+  devesan-backend:
+    build:
+      context: ./devesan/backend
+      dockerfile: Dockerfile
+    container_name: devesan-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@bdev-postgres:5432/${POSTGRES_DB}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEVESAN_ADMIN_PASSWORD=${DEVESAN_ADMIN_PASSWORD}
+      - INTEGRATION_KEY=${INTEGRATION_KEY:-bdev_int_key_2026}
+      - BDEV_API_URL=http://bdev-backend:8000
+      - N8N_URL=http://bdev-n8n:5678
+      - ALLOWED_ORIGINS=https://devesan.bdev.qzz.io,http://localhost:4200
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    depends_on:
+      bdev-postgres:
+        condition: service_healthy
+    networks:
+      - frontend-net
+      - backend-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.devesan-api.rule=Host(`devesan-api.bdev.qzz.io`)"
+      - "traefik.http.services.devesan-api.loadbalancer.server.port=8001"
+      - "traefik.docker.network=frontend-net"
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── devesan-frontend — Web Angular PsicoSalud Devesan ───────────────────────
+  devesan-frontend:
+    build:
+      context: D:/psicologiadevesan/psicologia-frontend
+      dockerfile: Dockerfile
+    container_name: devesan-frontend
+    restart: unless-stopped
+    depends_on:
+      devesan-backend:
+        condition: service_healthy
+    networks:
+      - frontend-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.devesan.rule=Host(`devesan.bdev.qzz.io`)"
+      - "traefik.http.services.devesan.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # VOLÚMENES — Persistencia garantizada de datos
